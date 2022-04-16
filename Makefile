@@ -24,7 +24,7 @@ $(OBJS): %.o: %.cpp
 	$(COMPILER) $(COMPILER_FLAGS) -c $^
 
 zip: $(SRCS) $(HDRS)
-	zip $(SUBMITTERS).zip $^ submitters.txt Makefile
+	zip $(SUBMITTlERS).zip $^ submitters.txt Makefile
 
 clean:
 	rm -rf $(SMASH_BIN) $(OBJS) $(TESTS_OUTPUTS) 

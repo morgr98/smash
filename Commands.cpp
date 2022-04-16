@@ -95,10 +95,12 @@ SmallShell::~SmallShell() {
 */
 Command * SmallShell::CreateCommand(const char* cmd_line) {
 	// For example:
-/*
+
   string cmd_s = _trim(string(cmd_line));
   string firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n"));
-
+  if (firstWord.compare("chprompt") == 0)
+      return new ChpromptCommand(cmd_line, &this->prompt);
+/*
   if (firstWord.compare("pwd") == 0) {
     return new GetCurrDirCommand(cmd_line);
   }
@@ -116,8 +118,36 @@ Command * SmallShell::CreateCommand(const char* cmd_line) {
 
 void SmallShell::executeCommand(const char *cmd_line) {
   // TODO: Add your implementation here
-  // for example:
-  // Command* cmd = CreateCommand(cmd_line);
-  // cmd->execute();
+   //for example:
+   Command* cmd = CreateCommand(cmd_line);
+   cmd->execute();
   // Please note that you must fork smash process for some commands (e.g., external commands....)
+}
+
+Command::Command(const char *cmd_line)  {
+    //this->command_args = (char**)malloc(sizeof(char*)*COMMAND_MAX_ARGS);
+    this->command_args = new char*[COMMAND_MAX_ARGS];
+    for (int i=0;i<COMMAND_MAX_ARGS;i++)
+        command_args[i] = nullptr;
+    this->num_args = _parseCommandLine(cmd_line, command_args);
+    this->cmd_line = (char*)malloc(sizeof(char)*(strlen(cmd_line) +1));
+}
+
+Command::~Command() noexcept {
+    for (int i=0;i<COMMAND_MAX_ARGS;i++)
+    {
+        if (this->command_args[i]!= nullptr)
+            free(command_args[i]);
+        else
+            break;
+    }
+    delete(this->command_args);
+    free(cmd_line);
+}
+
+void ChpromptCommand::execute() {
+    if (this->num_args > 1)
+        *(this->prompt) = std::string(this->command_args[1]) + "> ";
+    else
+        *(this->prompt) = "smash> ";
 }

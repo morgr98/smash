@@ -9,7 +9,11 @@
 class Command {
 // TODO: Add your data members
  public:
+    int num_args;
+    char** command_args;
+    char* cmd_line;
   Command(const char* cmd_line);
+  // create constructor
   virtual ~Command();
   virtual void execute() = 0;
   //virtual void prepare();
@@ -19,7 +23,7 @@ class Command {
 
 class BuiltInCommand : public Command {
  public:
-  BuiltInCommand(const char* cmd_line);
+  BuiltInCommand(const char* cmd_line): Command(cmd_line){};
   virtual ~BuiltInCommand() {}
 };
 
@@ -60,6 +64,15 @@ class GetCurrDirCommand : public BuiltInCommand {
   GetCurrDirCommand(const char* cmd_line);
   virtual ~GetCurrDirCommand() {}
   void execute() override;
+};
+
+class ChpromptCommand : public BuiltInCommand {
+public:
+    std::string *prompt;
+    ChpromptCommand(const char* cmd_line, std::string *prompt) : BuiltInCommand(cmd_line), prompt(prompt){};
+    virtual ~ChpromptCommand() {}
+    void execute() override;
+
 };
 
 class ShowPidCommand : public BuiltInCommand {
@@ -152,6 +165,7 @@ class SmallShell {
   // TODO: Add your data members
   SmallShell();
  public:
+    std::string prompt;
   Command *CreateCommand(const char* cmd_line);
   SmallShell(SmallShell const&)      = delete; // disable copy ctor
   void operator=(SmallShell const&)  = delete; // disable = operator
