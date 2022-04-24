@@ -54,14 +54,17 @@ class RedirectionCommand : public Command {
 
 class ChangeDirCommand : public BuiltInCommand {
 // TODO: Add your data members public:
-  ChangeDirCommand(const char* cmd_line, char** plastPwd);
-  virtual ~ChangeDirCommand() {}
+public:
+    std::string** plastPwd;
+    std::string newPwd;
+  ChangeDirCommand(const char* cmd_line, std::string* plastPwd): BuiltInCommand(cmd_line),plastPwd(plastPwd){};
+  virtual ~ChangeDirCommand() {}l
   void execute() override;
 };
 
 class GetCurrDirCommand : public BuiltInCommand {
  public:
-  GetCurrDirCommand(const char* cmd_line);
+  GetCurrDirCommand(const char* cmd_line): BuiltInCommand(cmd_line){};
   virtual ~GetCurrDirCommand() {}
   void execute() override;
 };
@@ -77,7 +80,8 @@ public:
 
 class ShowPidCommand : public BuiltInCommand {
  public:
-  ShowPidCommand(const char* cmd_line);
+    pid_t* shell_pid;
+  ShowPidCommand(const char* cmd_line, pid_t* shell_pid): BuiltInCommand(cmd_line), shell_pid(shell_pid){};
   virtual ~ShowPidCommand() {}
   void execute() override;
 };
@@ -165,7 +169,10 @@ class SmallShell {
   // TODO: Add your data members
   SmallShell();
  public:
-    std::string prompt;
+    std::string prompt = "smash> ";
+    pid_t shell_pid;
+    std::string old_pwd;
+    std::string curr_pwd;
   Command *CreateCommand(const char* cmd_line);
   SmallShell(SmallShell const&)      = delete; // disable copy ctor
   void operator=(SmallShell const&)  = delete; // disable = operator

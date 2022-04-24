@@ -84,6 +84,9 @@ void _removeBackgroundSign(char* cmd_line) {
 
 SmallShell::SmallShell() {
 // TODO: add your implementation
+    shell_pid = getpid();
+    old_pwd = "";
+    curr_pwd = get_current_dir_name();
 }
 
 SmallShell::~SmallShell() {
@@ -100,13 +103,14 @@ Command * SmallShell::CreateCommand(const char* cmd_line) {
   string firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n"));
   if (firstWord.compare("chprompt") == 0)
       return new ChpromptCommand(cmd_line, &this->prompt);
+  else if (firstWord.compare("pwd") == 0)
+      return new GetCurrDirCommand(cmd_line);
+  else if (firstWord.compare("showpid") == 0)
+    return new ShowPidCommand(cmd_line, &this->shell_pid);
+  else if  (firstWord.compare("cd") == 0)
+    return new ChangeDirCommand(cmd_line, &this->old_pwd);
+
 /*
-  if (firstWord.compare("pwd") == 0) {
-    return new GetCurrDirCommand(cmd_line);
-  }
-  else if (firstWord.compare("showpid") == 0) {
-    return new ShowPidCommand(cmd_line);
-  }
   else if ...
   .....
   else {
@@ -150,4 +154,27 @@ void ChpromptCommand::execute() {
         *(this->prompt) = std::string(this->command_args[1]) + "> ";
     else
         *(this->prompt) = "smash> ";
+}
+
+void ShowPidCommand::execute() {
+    //can pid change while shell is working?
+    cout << "smash pid is " << *(this->shell_pid) << endl;
+}
+
+void GetCurrDirCommand::execute() {
+    char* curr_dir = get_current_dir_name();
+    if (curr_dir == nullptr)
+        perror("smash error: get_current_dir_name failed");
+    cout << curr_dir << endl;
+    free(curr_dir);
+}
+
+void ChangeDirCommand::execute() {
+    if (this->num_args > 1)
+        cerr << "smash error: cd: too mant arguments" << endl;
+    std::string arg = this->command_args[1];
+    if (arg.compare("-"))
+    {
+    }
+
 }
