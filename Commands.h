@@ -12,6 +12,7 @@ public:
     int num_args;
     char** command_args;
     char* cmd_line;
+    pid_t pid_ex=-1;
     Command(const char* cmd_line);
     // create constructor
     virtual ~Command();
@@ -29,8 +30,10 @@ public:
 
 class ExternalCommand : public Command {
 public:
+    bool is_background;
+    std::string cmd_ex;
     ExternalCommand(const char* cmd_line);
-    virtual ~ExternalCommand() {}
+    virtual ~ExternalCommand() ;
     void execute() override;
 };
 

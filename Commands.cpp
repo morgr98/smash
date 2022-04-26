@@ -137,6 +137,7 @@ Command::Command(const char *cmd_line)  {
         command_args[i] = nullptr;
     this->num_args = _parseCommandLine(cmd_line, command_args);
     this->cmd_line = (char*)malloc(sizeof(char)*(strlen(cmd_line) +1));
+    strcpy(this->cmd_line, cmd_line);
 }
 
 Command::~Command() noexcept {
@@ -149,6 +150,50 @@ Command::~Command() noexcept {
     }
     delete(this->command_args);
     free(cmd_line);
+}
+
+ExternalCommand::ExternalCommand(const char *cmd_line) : Command(cmd_line){
+    cout<<"da"<<endl;
+    if(_isBackgroundComamnd(cmd_line))
+    {
+        this->is_background= true;
+    }
+    else
+        this->is_background=false;
+    this->cmd_ex=string(this->cmd_line);
+    _removeBackgroundSign((char*)this->cmd_ex.c_str());
+    cout<<"d"<<endl;
+
+}
+
+ExternalCommand::~ExternalCommand() {
+
+}
+
+void ExternalCommand::execute() {
+    this->pid_ex= fork();
+    if(this->pid_ex==-1)
+    {
+        perror("smash error: fork failed");
+        return;
+    }
+    if(this->pid_ex ==0)//child process
+    {
+        setpgrp();
+        char * args_commend []={(char *)"/bin/bash",(char *)"-c",(char *)this->cmd_ex.c_str(),(char *)"/0"};
+        execv(args_commend[0],args_commend);
+    }
+    else// father process
+    {
+        if(this->is_background)
+        {
+
+        }
+        else
+        {
+            waitpid(this->pid_ex,NULL, WUNTRACED);
+        }
+    }
 }
 
 void ChpromptCommand::execute() {
