@@ -1,10 +1,13 @@
 #ifndef SMASH_COMMAND_H_
 #define SMASH_COMMAND_H_
 
-#include <vector>
+#include <list>
 
 #define COMMAND_ARGS_MAX_LENGTH (200)
 #define COMMAND_MAX_ARGS (20)
+
+class JobsList;
+typedef int jobid;l
 
 class Command {
 // TODO: Add your data members
@@ -13,6 +16,7 @@ public:
     char** command_args;
     char* cmd_line;
     pid_t pid_ex=-1;
+    JobsList* jobsList;
     Command(const char* cmd_line);
     // create constructor
     virtual ~Command();
@@ -89,7 +93,6 @@ public:
     void execute() override;
 };
 
-class JobsList;
 class QuitCommand : public BuiltInCommand {
 // TODO: Add your data members public:
     QuitCommand(const char* cmd_line, JobsList* jobs);
@@ -103,12 +106,20 @@ class QuitCommand : public BuiltInCommand {
 class JobsList {
 public:
     class JobEntry {
+        jobid id;
+        std::string command_type;
+        Command* cmd;
+        time_t time_inserted;
+        bool is_stopped;
+
         // TODO: Add your data members
     };
     // TODO: Add your data members
 public:
-    JobsList();
-    ~JobsList();
+    std::list<JobEntry> jobs;
+    jobid max_id;
+    JobsList(): max_id(0){};
+    ~JobsList() = default;
     void addJob(Command* cmd, bool isStopped = false);
     void printJobsList();
     void killAllJobs();
@@ -176,6 +187,7 @@ public:
     pid_t shell_pid;
     std::string old_pwd;
     std::string curr_pwd;
+    JobsList jobsList;
     Command *CreateCommand(const char* cmd_line);
     SmallShell(SmallShell const&)      = delete; // disable copy ctor
     void operator=(SmallShell const&)  = delete; // disable = operator

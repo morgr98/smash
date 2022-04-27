@@ -115,10 +115,11 @@ Command * SmallShell::CreateCommand(const char* cmd_line) {
 /*
   else if ...
   .....
+  */
   else {
     return new ExternalCommand(cmd_line);
   }
-  */
+
     return nullptr;
 }
 
@@ -153,7 +154,6 @@ Command::~Command() noexcept {
 }
 
 ExternalCommand::ExternalCommand(const char *cmd_line) : Command(cmd_line){
-    cout<<"da"<<endl;
     if(_isBackgroundComamnd(cmd_line))
     {
         this->is_background= true;
@@ -162,7 +162,6 @@ ExternalCommand::ExternalCommand(const char *cmd_line) : Command(cmd_line){
         this->is_background=false;
     this->cmd_ex=string(this->cmd_line);
     _removeBackgroundSign((char*)this->cmd_ex.c_str());
-    cout<<"d"<<endl;
 
 }
 
@@ -238,10 +237,11 @@ void ChangeDirCommand::execute() {
     {
         if (chdir(this->command_args[1]) == -1)
             perror("smash error: chdir failed");
-        cout << *this->plastPwd << endl;
-        cout << *this->pcurrPwd << endl;
         *plastPwd = *pcurrPwd;
         *(this->pcurrPwd)=std::string(this->command_args[1]);
-        cout << "test" << endl;
     }
+}
+
+void JobsList::addJob(Command *cmd, bool isStopped) {
+
 }
