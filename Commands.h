@@ -7,7 +7,7 @@
 #define COMMAND_MAX_ARGS (20)
 
 class JobsList;
-typedef int jobid;l
+typedef int jobid;
 
 class Command {
 // TODO: Add your data members
@@ -16,8 +16,8 @@ public:
     char** command_args;
     char* cmd_line;
     pid_t pid_ex=-1;
-    JobsList* jobsList;
-    Command(const char* cmd_line);
+    JobsList* pjobsList;
+    Command(const char* cmd_line, JobsList* pjobslist);
     // create constructor
     virtual ~Command();
     virtual void execute() = 0;
@@ -28,7 +28,7 @@ public:
 
 class BuiltInCommand : public Command {
 public:
-    BuiltInCommand(const char* cmd_line): Command(cmd_line){};
+    BuiltInCommand(const char* cmd_line, JobsList* pjobslist): Command(cmd_line, pjobslist){};
     virtual ~BuiltInCommand() {}
 };
 
@@ -36,7 +36,7 @@ class ExternalCommand : public Command {
 public:
     bool is_background;
     std::string cmd_ex;
-    ExternalCommand(const char* cmd_line);
+    ExternalCommand(const char* cmd_line, JobsList* pjobsList);
     virtual ~ExternalCommand() ;
     void execute() override;
 };
@@ -64,14 +64,14 @@ class ChangeDirCommand : public BuiltInCommand {
 public:
     std::string *plastPwd;
     std::string *pcurrPwd;
-    ChangeDirCommand(const char* cmd_line, std::string *old_pwd, std::string *curr_pwd): BuiltInCommand(cmd_line), plastPwd(old_pwd), pcurrPwd(curr_pwd){};
+    ChangeDirCommand(const char* cmd_line, std::string *old_pwd, std::string *curr_pwd, JobsList* pjobslist): BuiltInCommand(cmd_line, pjobslist), plastPwd(old_pwd), pcurrPwd(curr_pwd){};
     virtual ~ChangeDirCommand() {}
     void execute() override;
 };
 
 class GetCurrDirCommand : public BuiltInCommand {
 public:
-    GetCurrDirCommand(const char* cmd_line): BuiltInCommand(cmd_line){};
+    GetCurrDirCommand(const char* cmd_line, JobsList* pjobslist): BuiltInCommand(cmd_line, pjobsList){};
     virtual ~GetCurrDirCommand() {}
     void execute() override;
 };
@@ -79,7 +79,7 @@ public:
 class ChpromptCommand : public BuiltInCommand {
 public:
     std::string *prompt;
-    ChpromptCommand(const char* cmd_line, std::string *prompt) : BuiltInCommand(cmd_line), prompt(prompt){};
+    ChpromptCommand(const char* cmd_line, std::string *prompt, JobsList* pjobslist) : BuiltInCommand(cmd_line, pjobslist), prompt(prompt){};
     virtual ~ChpromptCommand() {}
     void execute() override;
 
@@ -88,7 +88,7 @@ public:
 class ShowPidCommand : public BuiltInCommand {
 public:
     pid_t* shell_pid;
-    ShowPidCommand(const char* cmd_line, pid_t* shell_pid): BuiltInCommand(cmd_line), shell_pid(shell_pid){};
+    ShowPidCommand(const char* cmd_line, pid_t* shell_pid, JobsList* pjobslist): BuiltInCommand(cmd_line, pjobslist), shell_pid(shell_pid){};
     virtual ~ShowPidCommand() {}
     void execute() override;
 };

@@ -104,20 +104,20 @@ Command * SmallShell::CreateCommand(const char* cmd_line) {
     string cmd_s = _trim(string(cmd_line));
     string firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n"));
     if (firstWord.compare("chprompt") == 0)
-        return new ChpromptCommand(cmd_line, &this->prompt);
+        return new ChpromptCommand(cmd_line, &this->prompt, &this->jobsList);
     else if (firstWord.compare("pwd") == 0)
-        return new GetCurrDirCommand(cmd_line);
+        return new GetCurrDirCommand(cmd_line, &this->jobsList);
     else if (firstWord.compare("showpid") == 0)
-        return new ShowPidCommand(cmd_line, &this->shell_pid);
+        return new ShowPidCommand(cmd_line, &this->shell_pid, &this->jobsList);
     else if  (firstWord.compare("cd") == 0)
-        return new ChangeDirCommand(cmd_line, &this->old_pwd, &this->curr_pwd);
+        return new ChangeDirCommand(cmd_line, &this->old_pwd, &this->curr_pwd, &this->jobsList);
 
 /*
   else if ...
   .....
   */
   else {
-    return new ExternalCommand(cmd_line);
+    return new ExternalCommand(cmd_line, &this->jobsList);
   }
 
     return nullptr;
@@ -131,7 +131,7 @@ void SmallShell::executeCommand(const char *cmd_line) {
     // Please note that you must fork smash process for some commands (e.g., external commands....)
 }
 
-Command::Command(const char *cmd_line)  {
+Command::Command(const char *cmd_line, JobsList* pjobsList)  {
     //this->command_args = (char**)malloc(sizeof(char*)*COMMAND_MAX_ARGS);
     this->command_args = new char*[COMMAND_MAX_ARGS];
     for (int i=0;i<COMMAND_MAX_ARGS;i++)
@@ -139,6 +139,7 @@ Command::Command(const char *cmd_line)  {
     this->num_args = _parseCommandLine(cmd_line, command_args);
     this->cmd_line = (char*)malloc(sizeof(char)*(strlen(cmd_line) +1));
     strcpy(this->cmd_line, cmd_line);
+    this->pjobsList = pjobsList;
 }
 
 Command::~Command() noexcept {
@@ -153,7 +154,7 @@ Command::~Command() noexcept {
     free(cmd_line);
 }
 
-ExternalCommand::ExternalCommand(const char *cmd_line) : Command(cmd_line){
+ExternalCommand::ExternalCommand(const char *cmd_line, JobsList* pjobslist) : Command(cmd_line, pjobslist){
     if(_isBackgroundComamnd(cmd_line))
     {
         this->is_background= true;
@@ -242,6 +243,6 @@ void ChangeDirCommand::execute() {
     }
 }
 
-void JobsList::addJob(Command *cmd, bool isStopped) {
+/*void JobsList::addJob(Command *cmd, bool isStopped) {
 
-}
+}*/
