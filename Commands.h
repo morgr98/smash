@@ -8,7 +8,7 @@
 
 class JobsList;
 typedef int jobid;
-enum JobStatus {Stopped, Background};
+enum JobStatus {Stopped, Background,Foreground};
 
 class Command {
 // TODO: Add your data members
@@ -122,7 +122,9 @@ public:
 public:
     std::map<jobid, JobEntry*> jobs;
     jobid id_to_insert;
-    JobsList(): id_to_insert(1){
+    JobEntry* job_fg;
+    pid_t pi_fg=-1;
+    JobsList(): id_to_insert(1) , job_fg(nullptr){
         jobs.insert(std::pair<jobid, JobEntry*>(0,nullptr));
     };
     ~JobsList() = default;

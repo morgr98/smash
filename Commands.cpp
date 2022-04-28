@@ -193,6 +193,8 @@ void ExternalCommand::execute() {
         }
         else
         {
+            this->pjobsList->pi_fg=pid_ex;
+            this->pjobsList->job_fg= new JobsList::JobEntry(this,Foreground);
             waitpid(this->pid_ex,NULL, WUNTRACED);
         }
     }
