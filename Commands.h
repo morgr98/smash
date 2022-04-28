@@ -1,13 +1,14 @@
 #ifndef SMASH_COMMAND_H_
 #define SMASH_COMMAND_H_
 
-#include <list>
+#include <map>
 
 #define COMMAND_ARGS_MAX_LENGTH (200)
 #define COMMAND_MAX_ARGS (20)
 
 class JobsList;
 typedef int jobid;
+enum JobStatus {Stopped, Background};
 
 class Command {
 // TODO: Add your data members
@@ -28,7 +29,7 @@ public:
 
 class BuiltInCommand : public Command {
 public:
-    BuiltInCommand(const char* cmd_line, JobsList* pjobslist): Command(cmd_line, pjobslist){};
+    BuiltInCommand(const char* cmd_line, JobsList* shellsjobList): Command(cmd_line, shellsjobList){};
     virtual ~BuiltInCommand() {}
 };
 
@@ -71,7 +72,7 @@ public:
 
 class GetCurrDirCommand : public BuiltInCommand {
 public:
-    GetCurrDirCommand(const char* cmd_line, JobsList* pjobslist): BuiltInCommand(cmd_line, pjobsList){};
+    GetCurrDirCommand(const char* cmd_line, JobsList* pjobslist): BuiltInCommand(cmd_line, pjobslist){};
     virtual ~GetCurrDirCommand() {}
     void execute() override;
 };
@@ -93,6 +94,7 @@ public:
     void execute() override;
 };
 
+
 class QuitCommand : public BuiltInCommand {
 // TODO: Add your data members public:
     QuitCommand(const char* cmd_line, JobsList* jobs);
@@ -106,21 +108,25 @@ class QuitCommand : public BuiltInCommand {
 class JobsList {
 public:
     class JobEntry {
+    public:
         jobid id;
         std::string command_type;
         Command* cmd;
         time_t time_inserted;
-        bool is_stopped;
+        JobStatus status;
 
+        JobEntry(Command* cmd, JobStatus status);
         // TODO: Add your data members
     };
     // TODO: Add your data members
 public:
-    std::list<JobEntry> jobs;
-    jobid max_id;
-    JobsList(): max_id(0){};
+    std::map<jobid, JobEntry*> jobs;
+    jobid id_to_insert;
+    JobsList(): id_to_insert(1){
+        jobs.insert(std::pair<jobid, JobEntry*>(0,nullptr));
+    };
     ~JobsList() = default;
-    void addJob(Command* cmd, bool isStopped = false);
+    void addJob(Command* cmd, JobStatus status = Background);
     void printJobsList();
     void killAllJobs();
     void removeFinishedJobs();
@@ -132,9 +138,8 @@ public:
 };
 
 class JobsCommand : public BuiltInCommand {
-    // TODO: Add your data members
 public:
-    JobsCommand(const char* cmd_line, JobsList* jobs);
+    JobsCommand(const char* cmd_line, JobsList* shellsjobslist): BuiltInCommand(cmd_line, shellsjobslist){};
     virtual ~JobsCommand() {}
     void execute() override;
 };

@@ -111,14 +111,16 @@ Command * SmallShell::CreateCommand(const char* cmd_line) {
         return new ShowPidCommand(cmd_line, &this->shell_pid, &this->jobsList);
     else if  (firstWord.compare("cd") == 0)
         return new ChangeDirCommand(cmd_line, &this->old_pwd, &this->curr_pwd, &this->jobsList);
+    else if (firstWord.compare("jobs") == 0)
+        return new JobsCommand(cmd_line, &this->jobsList);
 
 /*
   else if ...
   .....
   */
-  else {
-    return new ExternalCommand(cmd_line, &this->jobsList);
-  }
+    else {
+        return new ExternalCommand(cmd_line, &this->jobsList);
+    }
 
     return nullptr;
 }
@@ -187,7 +189,7 @@ void ExternalCommand::execute() {
     {
         if(this->is_background)
         {
-
+            this->pjobsList->addJob(this, Background);
         }
         else
         {
@@ -243,6 +245,54 @@ void ChangeDirCommand::execute() {
     }
 }
 
-/*void JobsList::addJob(Command *cmd, bool isStopped) {
+void JobsCommand::execute() {
+    this->pjobsList->printJobsList();
+}
 
-}*/
+JobsList::JobEntry::JobEntry(Command *cmd, JobStatus status) {
+    this->cmd = cmd;
+    this->status = status;
+
+}
+void JobsList::addJob(Command *cmd, JobStatus status) {
+    this->removeFinishedJobs();
+    JobEntry* job = new JobEntry(cmd, status);
+    job->id = this->id_to_insert;
+    job->command_type = cmd->command_args[0];
+    job->time_inserted = time(nullptr);
+    this->jobs.insert(std::pair<jobid, JobEntry*>(job->id, job));
+    this->id_to_insert++;
+}
+
+void JobsList::removeFinishedJobs() {
+    for (auto riter = this->jobs.rbegin(); riter!=jobs.rend();)
+    {
+        if (riter->second!= nullptr)
+        {
+            pid_t pid = riter->second->cmd->pid_ex;
+            if(waitpid(pid,NULL, WNOHANG) > 0)
+            {
+                if (id_to_insert == riter->second->id + 1)
+                    id_to_insert--;
+                delete riter->second;
+                riter = decltype(riter){ this->jobs.erase(std::next(riter).base()) };
+                continue;
+            }
+        }
+        riter++;
+    }
+}
+
+void JobsList::printJobsList() {
+    this->removeFinishedJobs();
+    for (auto iter = this->jobs.begin(); iter!=this->jobs.end(); iter++)
+    {
+        if(iter->second== nullptr)
+            continue;
+        double time_elapsed = difftime(time(nullptr), iter->second->time_inserted);
+        cout << "[" << iter->second->id << "] " << iter->second->cmd->cmd_line << " : " << iter->second->cmd->pid_ex << " " << time_elapsed << " ";
+        if (iter->second->status == Stopped)
+            cout << "(stopped)";
+        cout << endl;
+    }
+}
