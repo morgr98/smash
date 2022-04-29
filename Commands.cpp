@@ -326,6 +326,7 @@ void ForegroundCommand::execute() {
     }
     Command* cmd = job_to_fg->cmd;
     pid_t pid = cmd->pid_ex;
+    cout << cmd->cmd_line << " : " << cmd->pid_ex << endl;
     if(kill(pid, SIGCONT)!=0)
     {
         perror("smash error: kill failed");
@@ -336,7 +337,6 @@ void ForegroundCommand::execute() {
     this->pjobsList->cmd_line_fg = cmd->cmd_line;
     this->pjobsList->cmd_fg = cmd;
     this->pjobsList->jid_fg = job_to_fg->id;
-    cout << cmd->cmd_line << " : " << cmd->pid_ex << endl;
     waitpid(this->pid_ex, NULL, WUNTRACED);
 }
 
