@@ -146,7 +146,6 @@ public:
     void removeFinishedJobs();
     JobEntry * getJobById(int jobId);
     void removeJobById(int jobId);
-    JobEntry * getLastJob(int* lastJobId);
     JobEntry *getLastStoppedJob(int *jobId);
     JobEntry *findMaxId(jobid *jobId);
     // TODO: Add extra methods or modify exisitng ones as needed
@@ -178,7 +177,7 @@ public:
 class BackgroundCommand : public BuiltInCommand {
     // TODO: Add your data members
 public:
-    BackgroundCommand(const char* cmd_line, JobsList* jobs);
+    BackgroundCommand(const char* cmd_line, JobsList* jobs): BuiltInCommand(cmd_line, jobs){};
     virtual ~BackgroundCommand() {}
     void execute() override;
 };

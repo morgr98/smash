@@ -121,6 +121,8 @@ Command * SmallShell::CreateCommand(const char* cmd_line) {
         return new KillCommand(cmd_line, &this->jobsList);
     else if(firstWord.compare("fg") == 0)
         return new ForegroundCommand(cmd_line, &this->jobsList);
+    else if(firstWord.compare("bg") == 0)
+        return new BackgroundCommand(cmd_line, &this->jobsList);
 
 /*
   else if ...
@@ -340,6 +342,54 @@ void ForegroundCommand::execute() {
     waitpid(this->pid_ex, NULL, WUNTRACED);
 }
 
+void BackgroundCommand::execute() {
+    if (this->num_args > 2)
+    {
+        cerr <<"smash error: bg: invalid arguments" << endl;
+        return;
+    }
+    JobsList::JobEntry* job_to_fg;
+    if (this->num_args == 2)
+    {
+        std::string jobid_string = std::string(this->command_args[1]);
+        if (!(isNumber(jobid_string)))
+        {
+            cerr <<"smash error: bg: invalid arguments" << endl;
+            return;
+        }
+        jobid jid = stoi(jobid_string);
+        job_to_fg = this->pjobsList->getJobById(jid);
+        if (job_to_fg == nullptr)
+        {
+            cerr << "smash error: bg: job-id "<< jid << " does not exist" << endl;
+            return;
+        }
+        if (job_to_fg->status!=Stopped)
+        {
+            cerr << "smash error: bg: job-id " << jid << "is already running in the background" << endl;
+            return;
+        }
+    }
+    else
+    {
+        job_to_fg = this->pjobsList->getLastStoppedJob(nullptr);
+        if (job_to_fg == nullptr)
+        {
+            cerr << "smash error: bg: there is no stopped jobs to resume" << endl;
+            return;
+        }
+    }
+    job_to_fg->status = Background;
+    Command* cmd = job_to_fg->cmd;
+    cout << cmd->cmd_line << " : " << cmd->pid_ex << endl;
+    if (kill(pid_ex, SIGCONT) != 0)
+    {
+        job_to_fg->status = Stopped;
+        perror("smash error: kill failed");
+        return;
+    }
+}
+
 JobsList::JobEntry::JobEntry(Command *cmd, JobStatus status) {
     this->cmd = cmd;
     this->status = status;
@@ -398,14 +448,14 @@ JobsList::JobEntry* JobsList::getJobById(int jobId) {
         return nullptr;
     return it->second;
 }
-JobsList::JobEntry* JobsList::findMaxId(jobid *jobId) {
+JobsList::JobEntry* JobsList::findMaxId(jobid* jobId) {
     for (auto riter = this->jobs.rbegin(); riter!=this->jobs.rend(); riter++)
     {
         if (riter->second!=nullptr)
         {
             if (jobId!=nullptr)
                 *jobId = riter->second->id;
-            this->max_id = *jobId;
+            this->max_id = riter->second->id;
             return riter->second;
         }
     }
@@ -415,6 +465,23 @@ JobsList::JobEntry* JobsList::findMaxId(jobid *jobId) {
     return nullptr;
 }
 
+JobsList::JobEntry* JobsList::getLastStoppedJob(int *jobId) {
+    for (auto riter = this->jobs.rbegin(); riter!=this->jobs.rend(); riter++)
+    {
+        if (riter->second!=nullptr)
+        {
+            if (riter->second->status==Stopped)
+            {
+                if (jobId!=nullptr)
+                    *jobId = riter->second->id;
+                return riter->second;
+            }
+        }
+    }
+    if (jobId!=nullptr)
+        *jobId = 0;
+    return nullptr;
+}
 void JobsList::removeJobById(int jobId) {
     this->jobs.erase(jobId);
 }
