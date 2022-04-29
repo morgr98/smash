@@ -122,12 +122,13 @@ public:
     // TODO: Add your data members
 public:
     std::map<jobid, JobEntry*> jobs;
-    jobid id_to_insert;
+    jobid max_id;
     JobEntry* job_fg;
    char* cmd_line_fg;
    Command* cmd_fg;
     pid_t pi_fg=-1;
-    JobsList(): id_to_insert(1) , job_fg(nullptr), cmd_fg(nullptr){
+    jobid jid_fg=-1;
+    JobsList(): max_id(0) , job_fg(nullptr), cmd_fg(nullptr){
         jobs.insert(std::pair<jobid, JobEntry*>(0,nullptr));
     };
     ~JobsList(){
@@ -147,6 +148,7 @@ public:
     void removeJobById(int jobId);
     JobEntry * getLastJob(int* lastJobId);
     JobEntry *getLastStoppedJob(int *jobId);
+    JobEntry *findMaxId(jobid *jobId);
     // TODO: Add extra methods or modify exisitng ones as needed
 };
 
@@ -168,7 +170,7 @@ public:
 class ForegroundCommand : public BuiltInCommand {
     // TODO: Add your data members
 public:
-    ForegroundCommand(const char* cmd_line, JobsList* jobs);
+    ForegroundCommand(const char* cmd_line, JobsList* jobs): BuiltInCommand(cmd_line, jobs){};
     virtual ~ForegroundCommand() {}
     void execute() override;
 };

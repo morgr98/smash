@@ -119,6 +119,8 @@ Command * SmallShell::CreateCommand(const char* cmd_line) {
         return new JobsCommand(cmd_line, &this->jobsList);
     else if(firstWord.compare("kill") == 0)
         return new KillCommand(cmd_line, &this->jobsList);
+    else if(firstWord.compare("fg") == 0)
+        return new ForegroundCommand(cmd_line, &this->jobsList);
 
 /*
   else if ...
@@ -135,6 +137,7 @@ void SmallShell::executeCommand(const char *cmd_line) {
     // TODO: Add your implementation here
     //for example:
     Command* cmd = CreateCommand(cmd_line);
+    cmd->pjobsList->removeFinishedJobs();
     cmd->execute();
     // Please note that you must fork smash process for some commands (e.g., external commands....)
 }
@@ -289,19 +292,68 @@ void JobsCommand::execute() {
     this->pjobsList->printJobsList();
 }
 
+void ForegroundCommand::execute() {
+    if (this->num_args > 2)
+    {
+        cerr <<"smash error: fg: invalid arguments" << endl;
+        return;
+    }
+    JobsList::JobEntry* job_to_fg;
+    if (this->num_args == 2)
+    {
+        std::string jobid_string = std::string(this->command_args[1]);
+        if (!(isNumber(jobid_string)))
+        {
+            cerr <<"smash error: fg: invalid arguments" << endl;
+            return;
+        }
+        jobid jid = stoi(jobid_string);
+        job_to_fg = this->pjobsList->getJobById(jid);
+        if (job_to_fg == nullptr)
+        {
+            cerr << "smash error: fg: job-id "<< jid << " does not exist" << endl;
+            return;
+        }
+    }
+    else
+    {
+        job_to_fg = this->pjobsList->findMaxId(nullptr);
+        if (job_to_fg == nullptr)
+        {
+            cerr << "smash error: fg: jobs list is empty" << endl;
+            return;
+        }
+    }
+    Command* cmd = job_to_fg->cmd;
+    pid_t pid = cmd->pid_ex;
+    if(kill(pid, SIGCONT)!=0)
+    {
+        perror("smash error: kill failed");
+        return;
+    }
+    this->pjobsList->removeJobById(job_to_fg->id);
+    this->pjobsList->pi_fg = pid;
+    this->pjobsList->cmd_line_fg = cmd->cmd_line;
+    this->pjobsList->cmd_fg = cmd;
+    this->pjobsList->jid_fg = job_to_fg->id;
+    cout << cmd->cmd_line << " : " << cmd->pid_ex << endl;
+    waitpid(this->pid_ex, NULL, WUNTRACED);
+}
+
 JobsList::JobEntry::JobEntry(Command *cmd, JobStatus status) {
     this->cmd = cmd;
     this->status = status;
 
 }
 void JobsList::addJob(Command *cmd, JobStatus status) {
-    this->removeFinishedJobs(); //shared_ptr
+    this->removeFinishedJobs();
+    findMaxId(&max_id);
     JobEntry* job = new JobEntry(cmd, status);
-    job->id = this->id_to_insert;
+    job->id = this->max_id+1;
     job->command_type = cmd->command_args[0];
     job->time_inserted = time(nullptr);
     this->jobs.insert(std::pair<jobid, JobEntry*>(job->id, job));
-    this->id_to_insert++;
+    this->max_id=job->id;
 }
 
 void JobsList::removeFinishedJobs() {
@@ -312,10 +364,9 @@ void JobsList::removeFinishedJobs() {
             pid_t pid = riter->second->cmd->pid_ex;
             if(waitpid(pid,NULL, WNOHANG) > 0)
             {
-                if (id_to_insert == riter->second->id + 1) //need to fix
+                if (this->max_id == riter->second->id)
                 {
-                    id_to_insert--;
-                    //find max index
+                    findMaxId(&max_id);
                 }
 
                 delete riter->second;
@@ -346,4 +397,24 @@ JobsList::JobEntry* JobsList::getJobById(int jobId) {
     if (it == this->jobs.end())
         return nullptr;
     return it->second;
+}
+JobsList::JobEntry* JobsList::findMaxId(jobid *jobId) {
+    for (auto riter = this->jobs.rbegin(); riter!=this->jobs.rend(); riter++)
+    {
+        if (riter->second!=nullptr)
+        {
+            if (jobId!=nullptr)
+                *jobId = riter->second->id;
+            this->max_id = *jobId;
+            return riter->second;
+        }
+    }
+    if (jobId!=nullptr)
+        *jobId = 0;
+    this->max_id = 0;
+    return nullptr;
+}
+
+void JobsList::removeJobById(int jobId) {
+    this->jobs.erase(jobId);
 }
