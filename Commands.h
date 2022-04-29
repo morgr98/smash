@@ -52,6 +52,7 @@ public:
 
 class RedirectionCommand : public Command {
     // TODO: Add your data members
+
 public:
     explicit RedirectionCommand(const char* cmd_line);
     virtual ~RedirectionCommand() {}
@@ -123,8 +124,10 @@ public:
     std::map<jobid, JobEntry*> jobs;
     jobid id_to_insert;
     JobEntry* job_fg;
+   char* cmd_line_fg;
+   Command* cmd_fg;
     pid_t pi_fg=-1;
-    JobsList(): id_to_insert(1) , job_fg(nullptr){
+    JobsList(): id_to_insert(1) , job_fg(nullptr), cmd_fg(nullptr){
         jobs.insert(std::pair<jobid, JobEntry*>(0,nullptr));
     };
     ~JobsList() = default;

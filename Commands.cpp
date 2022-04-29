@@ -187,15 +187,15 @@ void ExternalCommand::execute() {
     }
     else// father process
     {
-        if(this->is_background)
-        {
+        if (this->is_background) {
             this->pjobsList->addJob(this, Background);
-        }
-        else
-        {
-            this->pjobsList->pi_fg=pid_ex;
-            this->pjobsList->job_fg= new JobsList::JobEntry(this,Foreground);
-            waitpid(this->pid_ex,NULL, WUNTRACED);
+        } else {
+            this->pjobsList->pi_fg = pid_ex;
+            this->pjobsList->cmd_line_fg = this->command_args[0];
+            this->pjobsList->cmd_fg = this;
+            //this->pjobsList->job_fg= new JobsList::JobEntry(this,Foreground);
+            //this->pjobsList->job_fg->command_type=this->command_args[1];
+            waitpid(this->pid_ex, NULL, WUNTRACED);
         }
     }
 }
