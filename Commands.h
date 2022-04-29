@@ -29,7 +29,7 @@ public:
 
 class BuiltInCommand : public Command {
 public:
-    BuiltInCommand(const char* cmd_line, JobsList* shellsjobList): Command(cmd_line, shellsjobList){};
+    BuiltInCommand(const char* cmd_line, JobsList* shellsjobList);
     virtual ~BuiltInCommand() {}
 };
 

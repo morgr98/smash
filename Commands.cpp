@@ -107,21 +107,21 @@ Command * SmallShell::CreateCommand(const char* cmd_line) {
 
     string cmd_s = _trim(string(cmd_line));
     string firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n"));
-    if (firstWord.compare("chprompt") == 0)
+    if (firstWord.compare("chprompt") == 0 || firstWord.compare("chprompt&") == 0)
         return new ChpromptCommand(cmd_line, &this->prompt, &this->jobsList);
-    else if (firstWord.compare("pwd") == 0)
+    else if (firstWord.compare("pwd") == 0 || firstWord.compare("pwd&") == 0)
         return new GetCurrDirCommand(cmd_line, &this->jobsList);
-    else if (firstWord.compare("showpid") == 0)
+    else if (firstWord.compare("showpid") == 0 || firstWord.compare("showpid&") == 0)
         return new ShowPidCommand(cmd_line, &this->shell_pid, &this->jobsList);
-    else if  (firstWord.compare("cd") == 0)
+    else if  (firstWord.compare("cd") == 0 || firstWord.compare("cd&") == 0)
         return new ChangeDirCommand(cmd_line, &this->old_pwd, &this->curr_pwd, &this->jobsList);
-    else if (firstWord.compare("jobs") == 0)
+    else if (firstWord.compare("jobs") == 0 || firstWord.compare("jobs&") == 0)
         return new JobsCommand(cmd_line, &this->jobsList);
-    else if(firstWord.compare("kill") == 0)
+    else if(firstWord.compare("kill") == 0 || firstWord.compare("kill&") == 0)
         return new KillCommand(cmd_line, &this->jobsList);
-    else if(firstWord.compare("fg") == 0)
+    else if(firstWord.compare("fg") == 0 || firstWord.compare("fg&") == 0)
         return new ForegroundCommand(cmd_line, &this->jobsList);
-    else if(firstWord.compare("bg") == 0)
+    else if(firstWord.compare("bg") == 0|| firstWord.compare("bg&") == 0)
         return new BackgroundCommand(cmd_line, &this->jobsList);
 
 /*
@@ -167,6 +167,12 @@ Command::~Command() noexcept {
     free(cmd_line);
 }
 
+BuiltInCommand::BuiltInCommand(const char* cmd_line, JobsList* shellsjobList):Command(cmd_line, shellsjobList){
+    _removeBackgroundSign(this->cmd_line);
+    if (this->num_args>0)
+        _removeBackgroundSign(this->command_args[0]);
+}
+
 ExternalCommand::ExternalCommand(const char *cmd_line, JobsList* pjobslist) : Command(cmd_line, pjobslist){
     if(_isBackgroundComamnd(cmd_line))
     {
@@ -195,6 +201,7 @@ void ExternalCommand::execute() {
         setpgrp();
         char * args_commend []={(char *)"/bin/bash",(char *)"-c",(char *)this->cmd_ex.c_str(),(char *)"/0"};
         execv(args_commend[0],args_commend);
+        //if command not found?
     }
     else// father process
     {
