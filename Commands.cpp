@@ -8,7 +8,7 @@
 #include "Commands.h"
 #include <time.h>
 #include <utime.h>
-
+#include <algorithm>
 
 using namespace std;
 
@@ -80,6 +80,10 @@ void _removeBackgroundSign(char* cmd_line) {
     cmd_line[str.find_last_not_of(WHITESPACE, idx) + 1] = 0;
 }
 
+bool isNumber(const std::string &s) {
+    return !s.empty() && std::all_of(s.begin(), s.end(), ::isdigit);
+}
+
 // todo: Add your implementation for classes in Commands.h
 
 SmallShell::SmallShell() {
@@ -113,6 +117,8 @@ Command * SmallShell::CreateCommand(const char* cmd_line) {
         return new ChangeDirCommand(cmd_line, &this->old_pwd, &this->curr_pwd, &this->jobsList);
     else if (firstWord.compare("jobs") == 0)
         return new JobsCommand(cmd_line, &this->jobsList);
+    else if(firstWord.compare("kill") == 0)
+        return new KillCommand(cmd_line, &this->jobsList);
 
 /*
   else if ...
@@ -247,6 +253,38 @@ void ChangeDirCommand::execute() {
     }
 }
 
+void KillCommand::execute() {
+    if (this->num_args > 3 || this->num_args < 3) {
+        cerr << "smash error: kill: invalid arguments" << endl;
+        return;
+    }
+    std::string sig_num_str = this->command_args[1];
+    std::string jobid = this->command_args[2];
+    if (sig_num_str.at(0) != ('-') || !isNumber(sig_num_str.substr(1)) || !isNumber(jobid)) {
+        cerr << "smash error: kill: invalid arguments" << endl;
+        return;
+    }
+    int sig_num = stoi(sig_num_str.substr(1));
+    if (sig_num < 1 || sig_num > 31)
+    {
+        cerr << "smash error: kill: invalid arguments" << endl;
+    }
+    JobsList::JobEntry* job = this->pjobsList->getJobById(stoi(jobid));
+    if (job== nullptr)
+    {
+        cerr << "smash error: kill: job-id " << jobid << " does not exist" << endl;
+        return;
+    }
+    pid_t job_pid = job->cmd->pid_ex;
+    if (kill(job_pid, sig_num)!=0)
+    {
+        perror("smash error: kill failed");
+        return;
+    }
+    cout << "signal number " << sig_num << " was sent to pid " << job_pid << endl;
+    this->pjobsList->removeFinishedJobs();
+}
+
 void JobsCommand::execute() {
     this->pjobsList->printJobsList();
 }
@@ -257,7 +295,7 @@ JobsList::JobEntry::JobEntry(Command *cmd, JobStatus status) {
 
 }
 void JobsList::addJob(Command *cmd, JobStatus status) {
-    this->removeFinishedJobs();
+    this->removeFinishedJobs(); //shared_ptr
     JobEntry* job = new JobEntry(cmd, status);
     job->id = this->id_to_insert;
     job->command_type = cmd->command_args[0];
@@ -274,8 +312,12 @@ void JobsList::removeFinishedJobs() {
             pid_t pid = riter->second->cmd->pid_ex;
             if(waitpid(pid,NULL, WNOHANG) > 0)
             {
-                if (id_to_insert == riter->second->id + 1)
+                if (id_to_insert == riter->second->id + 1) //need to fix
+                {
                     id_to_insert--;
+                    //find max index
+                }
+
                 delete riter->second;
                 riter = decltype(riter){ this->jobs.erase(std::next(riter).base()) };
                 continue;
@@ -297,4 +339,11 @@ void JobsList::printJobsList() {
             cout << "(stopped)";
         cout << endl;
     }
+}
+
+JobsList::JobEntry* JobsList::getJobById(int jobId) {
+    auto it = this->jobs.find(jobId);
+    if (it == this->jobs.end())
+        return nullptr;
+    return it->second;
 }

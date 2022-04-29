@@ -9,7 +9,7 @@ void ctrlZHandler(int sig_num) {
     SmallShell &smash = SmallShell::getInstance();
     if (smash.jobsList.pi_fg != -1) {
         cout << "smash: got ctrl-Z" << endl;
-        kill((smash.jobsList.pi_fg),7);
+        kill((smash.jobsList.pi_fg),SIGSTOP);
         cout << "smash: process " << smash.jobsList.pi_fg << " was stopped" << endl;
         /*
        smash.jobsList.job_fg->status= Stopped;
@@ -30,7 +30,7 @@ void ctrlCHandler(int sig_num) {
     SmallShell &smash = SmallShell::getInstance();
     if (smash.jobsList.pi_fg != -1) {
         cout << "smash: got ctrl-C" << endl;
-        kill(smash.jobsList.pi_fg, 2);
+        kill(smash.jobsList.pi_fg, SIGKILL);
         cout << "smash: process " << smash.jobsList.pi_fg << " was killed" << endl;
         smash.jobsList.pi_fg = -1;
         //smash.jobsList.cmd_line_fg="";

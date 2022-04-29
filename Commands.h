@@ -8,7 +8,7 @@
 
 class JobsList;
 typedef int jobid;
-enum JobStatus {Stopped, Background,Foreground};
+enum JobStatus {Stopped, Background, Foreground};
 
 class Command {
 // TODO: Add your data members
@@ -130,7 +130,15 @@ public:
     JobsList(): id_to_insert(1) , job_fg(nullptr), cmd_fg(nullptr){
         jobs.insert(std::pair<jobid, JobEntry*>(0,nullptr));
     };
-    ~JobsList() = default;
+    ~JobsList(){
+        for (auto it = jobs.begin(); it!=jobs.end();it++)
+        {
+            if (it->second!=nullptr)
+            {
+                delete it->second;
+            }
+        }
+    };
     void addJob(Command* cmd, JobStatus status = Background);
     void printJobsList();
     void killAllJobs();
@@ -152,7 +160,7 @@ public:
 class KillCommand : public BuiltInCommand {
     // TODO: Add your data members
 public:
-    KillCommand(const char* cmd_line, JobsList* jobs);
+    KillCommand(const char* cmd_line, JobsList* jobs):BuiltInCommand(cmd_line, jobs){};
     virtual ~KillCommand() {}
     void execute() override;
 };
