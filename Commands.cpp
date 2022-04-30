@@ -258,8 +258,16 @@ void ChangeDirCommand::execute() {
     std::string arg = this->command_args[1];
     if (arg.compare("-") == 0)
     {
-        if (chdir((this->plastPwd)->c_str()) == -1)
+        if (this->plastPwd->compare("") == 0)
+        {
+            cerr << "smash error: cd: OLDPWD not set" << endl;
+            return;
+        }
+        else if (chdir((this->plastPwd)->c_str()) == -1)
+        {
             perror("smash error: chdir failed");
+            return;
+        }
         std::swap(*(this->pcurrPwd),*(this->plastPwd));
     }
     else
