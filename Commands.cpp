@@ -115,11 +115,11 @@ Command * SmallShell::CreateCommand(const char* cmd_line) {
         return new GetCurrDirCommand(cmd_line, &this->jobsList);
     else if (firstWord.compare("showpid") == 0 || firstWord.compare("showpid&") == 0)
         return new ShowPidCommand(cmd_line, &this->shell_pid, &this->jobsList);
-    else if  (firstWord.compare("cd") == 0 || firstWord.compare("cd&") == 0)
+    else if  (firstWord.compare("cd") == 0)// || firstWord.compare("cd&") == 0)
         return new ChangeDirCommand(cmd_line, &this->old_pwd, &this->curr_pwd, &this->jobsList);
     else if (firstWord.compare("jobs") == 0 || firstWord.compare("jobs&") == 0)
         return new JobsCommand(cmd_line, &this->jobsList);
-    else if(firstWord.compare("kill") == 0 || firstWord.compare("kill&") == 0)
+    else if(firstWord.compare("kill") == 0) //|| firstWord.compare("kill&") == 0)
         return new KillCommand(cmd_line, &this->jobsList);
     else if(firstWord.compare("fg") == 0 || firstWord.compare("fg&") == 0)
         return new ForegroundCommand(cmd_line, &this->jobsList);
@@ -174,9 +174,14 @@ Command::~Command() noexcept {
 }
 
 BuiltInCommand::BuiltInCommand(const char* cmd_line, JobsList* shellsjobList):Command(cmd_line, shellsjobList){
-    _removeBackgroundSign(this->cmd_line);
-    if (this->num_args>0)
-        _removeBackgroundSign(this->command_args[0]);
+    if (_isBackgroundComamnd(cmd_line))
+    {
+        std::string last_arg = this->command_args[this->num_args-1];
+        if (last_arg.compare("&")==0)
+            this->num_args--;
+        else
+            _removeBackgroundSign(this->command_args[this->num_args-1]);
+    }
 }
 
 ExternalCommand::ExternalCommand(const char *cmd_line, JobsList* pjobslist) : Command(cmd_line, pjobslist){
@@ -256,7 +261,8 @@ void ChangeDirCommand::execute() {
         return;
     }
     std::string arg = this->command_args[1];
-    if (arg.compare("-") == 0)
+    int idx = arg.find_last_not_of(WHITESPACE);
+    if (arg[idx]=='-')
     {
         if (this->plastPwd->compare("") == 0)
         {
