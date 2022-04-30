@@ -431,6 +431,35 @@ void QuitCommand::execute() {
     }
     exit(0);
 }
+/*
+void TailCommand::execute() {
+    if (this->num_args > 3 || this->num_args <= 1)
+    {
+        cerr << "smash error: tail: invalid arguments" << endl;
+        return;
+    }
+    FILE* f;
+    int N = 10;
+    std::string arg_2 = this->command_args[1];
+    if (isNumber(arg_2))
+    {
+        N = stoi(arg_2);
+        f = fopen(this->command_args[2], "r");
+    }
+    else
+    {
+        f = fopen(this->command_args[1], "r");
+    }
+    if (f==nullptr)
+    {
+        perror("smash error: open failed");
+        return;
+    }
+    fseek(f, 0, SEEK_END);
+
+
+
+}*/
 
 JobsList::JobEntry::JobEntry(Command *cmd, JobStatus status) {
     this->cmd = cmd;

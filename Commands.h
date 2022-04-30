@@ -185,7 +185,7 @@ public:
 
 class TailCommand : public BuiltInCommand {
 public:
-    TailCommand(const char* cmd_line);
+    TailCommand(const char* cmd_line, JobsList* jobs): BuiltInCommand(cmd_line, jobs){};
     virtual ~TailCommand() {}
     void execute() override;
 };
