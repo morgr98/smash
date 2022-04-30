@@ -107,6 +107,8 @@ Command * SmallShell::CreateCommand(const char* cmd_line) {
 
     string cmd_s = _trim(string(cmd_line));
     string firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n"));
+    if (firstWord.compare("") == 0)
+        return nullptr;
     if (firstWord.compare("chprompt") == 0 || firstWord.compare("chprompt&") == 0)
         return new ChpromptCommand(cmd_line, &this->prompt, &this->jobsList);
     else if (firstWord.compare("pwd") == 0 || firstWord.compare("pwd&") == 0)
@@ -123,6 +125,8 @@ Command * SmallShell::CreateCommand(const char* cmd_line) {
         return new ForegroundCommand(cmd_line, &this->jobsList);
     else if(firstWord.compare("bg") == 0|| firstWord.compare("bg&") == 0)
         return new BackgroundCommand(cmd_line, &this->jobsList);
+    else if(firstWord.compare("quit") == 0 || firstWord.compare("quit&") == 0)
+        return new QuitCommand(cmd_line, &this->jobsList);
 
 /*
   else if ...
@@ -139,6 +143,8 @@ void SmallShell::executeCommand(const char *cmd_line) {
     // TODO: Add your implementation here
     //for example:
     Command* cmd = CreateCommand(cmd_line);
+    if (cmd == nullptr)
+        return;
     cmd->pjobsList->removeFinishedJobs();
     cmd->execute();
     // Please note that you must fork smash process for some commands (e.g., external commands....)
@@ -397,6 +403,21 @@ void BackgroundCommand::execute() {
     }
 }
 
+void QuitCommand::execute() {
+    if (num_args >1)
+    {
+        std::string first_arg = this->command_args[1];
+        if(first_arg.compare("kill") == 0 || first_arg.compare("kill&") == 0) //kill will surely be the first?
+        {
+            cout << "sending SIGKILL signal to " << this->pjobsList->jobs.size() - 1 << " jobs:" << endl;
+            std::string message;
+            this->pjobsList->killAllJobs(nullptr, &message);
+            cout << message;
+        }
+    }
+    exit(0);
+}
+
 JobsList::JobEntry::JobEntry(Command *cmd, JobStatus status) {
     this->cmd = cmd;
     this->status = status;
@@ -491,4 +512,22 @@ JobsList::JobEntry* JobsList::getLastStoppedJob(int *jobId) {
 }
 void JobsList::removeJobById(int jobId) {
     this->jobs.erase(jobId);
+}
+
+void JobsList::killAllJobs(int* num_killed, std::string* message) {
+    for (auto it = this->jobs.begin(); it!=this->jobs.end(); it++)
+    {
+        if (it->second!=nullptr)
+        {
+            pid_t pid = it->second->cmd->pid_ex;
+            if (kill(pid, SIGKILL) != 0)
+            {
+                perror("smash error: kill failed"); //what do we do then?
+            }
+            if (num_killed!=nullptr)
+                (*num_killed)++;
+            if (message!=nullptr)
+                *message += (std::to_string(pid) + ": " + it->second->cmd->cmd_line + "\n");
+        }
+    }
 }
