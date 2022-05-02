@@ -9,6 +9,7 @@
 #include <time.h>
 #include <utime.h>
 #include <algorithm>
+#include <fcntl.h>
 
 using namespace std;
 
@@ -127,6 +128,8 @@ Command * SmallShell::CreateCommand(const char* cmd_line) {
         return new BackgroundCommand(cmd_line, &this->jobsList);
     else if(firstWord.compare("quit") == 0 || firstWord.compare("quit&") == 0)
         return new QuitCommand(cmd_line, &this->jobsList);
+    else if (firstWord.compare("tail") == 0)
+        return new TailCommand(cmd_line, &this->jobsList);
 
 /*
   else if ...
@@ -431,36 +434,73 @@ void QuitCommand::execute() {
     }
     exit(0);
 }
-/*
+
 void TailCommand::execute() {
-    if (this->num_args > 3 || this->num_args <= 1)
-    {
+    if (this->num_args > 3 || this->num_args <= 1) {
         cerr << "smash error: tail: invalid arguments" << endl;
         return;
     }
-    FILE* f;
+    int fd;
     int N = 10;
     std::string arg_2 = this->command_args[1];
-    if (isNumber(arg_2))
-    {
+    if (isNumber(arg_2)) {
         N = stoi(arg_2);
-        f = fopen(this->command_args[2], "r");
+
+        fd = open(this->command_args[2], O_RDONLY);
+        if (fd == -1) {
+            perror("smash error: open failed");
+            return;
+        }
+    } else {
+        fd = open(this->command_args[1], O_RDONLY);
+        if (fd == -1) {
+            perror("smash error: open failed");
+            return;
+        }
     }
-    else
+    off64_t end =  lseek(fd, 0, SEEK_END);
+    if (end==-1)
     {
-        f = fopen(this->command_args[1], "r");
-    }
-    if (f==nullptr)
-    {
-        perror("smash error: open failed");
+        perror("smash error: lseek failed");
         return;
     }
-    fseek(f, 0, SEEK_END);
-
-
-
-}*/
-
+    char buffer;
+    int count = 0;
+    off64_t i = 0;
+    while (i < end - 1)
+    {
+        if (read(fd, &buffer, 1) == -1)
+        {
+            perror("smash error: read failed");
+            return;
+        }
+        if (buffer == '\n')
+        {
+            count++;
+        }
+        if (count == N)
+        {
+            i+=2;
+            break;
+        }
+        i++;
+        if(lseek(fd, -2, SEEK_CUR)==-1)
+        {
+            perror("smash error: lseek failed");
+            return;
+        }
+    }
+    if (count < N)
+        i+=1;
+    off64_t bytes_to_read = i;
+    char* to_print = (char*)malloc(sizeof(char)*(bytes_to_read + 1));
+    if (read(fd, to_print, bytes_to_read) == -1) {
+        perror("smash error: read failed");
+        return;
+    }
+    cout << to_print;
+    free(to_print);
+}
 JobsList::JobEntry::JobEntry(Command *cmd, JobStatus status) {
     this->cmd = cmd;
     this->status = status;
