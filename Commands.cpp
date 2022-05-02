@@ -63,7 +63,7 @@ bool _isBackgroundComamnd(const char* cmd_line) {
     return str[str.find_last_not_of(WHITESPACE)] == '&';
 }
 
-void _removeBackgroundSign(char* cmd_line) {
+void _removeBackgroundSign(char* cmd_line, bool leave_space = true) {
     const string str(cmd_line);
     // find last character other than spaces
     unsigned int idx = str.find_last_not_of(WHITESPACE);
@@ -79,6 +79,8 @@ void _removeBackgroundSign(char* cmd_line) {
     cmd_line[idx] = ' ';
     // truncate the command line string up to the last non-space character
     cmd_line[str.find_last_not_of(WHITESPACE, idx) + 1] = 0;
+    if (!leave_space)
+        cmd_line[str.find_last_not_of(WHITESPACE, idx + 1)] = 0;
 }
 
 bool isNumber(const std::string &s) {
@@ -183,7 +185,10 @@ BuiltInCommand::BuiltInCommand(const char* cmd_line, JobsList* shellsjobList):Co
         if (last_arg.compare("&")==0)
             this->num_args--;
         else
-            _removeBackgroundSign(this->command_args[this->num_args-1]);
+        {
+            _removeBackgroundSign(this->command_args[this->num_args-1], false);
+        }
+
     }
 }
 
@@ -215,7 +220,7 @@ void ExternalCommand::execute() {
         setpgrp();
         char * args_commend []={(char *)"/bin/bash",(char *)"-c",(char *)this->cmd_ex.c_str(),(char *)"/0"};
         execv(args_commend[0],args_commend);
-        //if command not found?
+        //for morg - i think you should do it here that if command not found you perror(smash error: ........) and than return;
     }
     else// father process
     {
@@ -247,7 +252,10 @@ void ShowPidCommand::execute() {
 void GetCurrDirCommand::execute() {
     char* curr_dir = get_current_dir_name();
     if (curr_dir == nullptr)
+    {
         perror("smash error: get_current_dir_name failed");
+        return;
+    }
     cout << curr_dir << endl;
     free(curr_dir);
 }
@@ -282,7 +290,10 @@ void ChangeDirCommand::execute() {
     else
     {
         if (chdir(this->command_args[1]) == -1)
+        {
             perror("smash error: chdir failed");
+            return;
+        }
         *plastPwd = *pcurrPwd;
         *(this->pcurrPwd)=std::string(this->command_args[1]);
     }
@@ -445,7 +456,6 @@ void TailCommand::execute() {
     std::string arg_2 = this->command_args[1];
     if (isNumber(arg_2)) {
         N = stoi(arg_2);
-
         fd = open(this->command_args[2], O_RDONLY);
         if (fd == -1) {
             perror("smash error: open failed");
