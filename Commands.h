@@ -45,7 +45,7 @@ public:
 class PipeCommand : public Command {
     // TODO: Add your data members
 public:
-    PipeCommand(const char* cmd_line);
+    explicit PipeCommand(const char* cmd_line, JobsList* pjobslist) : Command(cmd_line, pjobslist) {};
     virtual ~PipeCommand() {}
     void execute() override;
 };
@@ -54,7 +54,7 @@ class RedirectionCommand : public Command {
     // TODO: Add your data members
 
 public:
-    explicit RedirectionCommand(const char* cmd_line);
+    explicit RedirectionCommand(const char* cmd_line, JobsList* pjobslist) : Command(cmd_line, pjobslist) {};
     virtual ~RedirectionCommand() {}
     void execute() override;
     //void prepare() override;

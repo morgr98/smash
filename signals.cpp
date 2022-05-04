@@ -7,8 +7,9 @@ using namespace std;
 
 void ctrlZHandler(int sig_num) {
     SmallShell &smash = SmallShell::getInstance();
+    cout << "smash: got ctrl-Z" << endl;
     if (smash.jobsList.pi_fg != -1) {
-        cout << "smash: got ctrl-Z" << endl;
+
         kill((smash.jobsList.pi_fg),SIGSTOP);
         cout << "smash: process " << smash.jobsList.pi_fg << " was stopped" << endl;
         /*
@@ -41,8 +42,9 @@ void ctrlZHandler(int sig_num) {
 
 void ctrlCHandler(int sig_num) {
     SmallShell &smash = SmallShell::getInstance();
+    cout << "smash: got ctrl-C" << endl;
     if (smash.jobsList.pi_fg != -1) {
-        cout << "smash: got ctrl-C" << endl;
+
         kill(smash.jobsList.pi_fg, SIGKILL);
         cout << "smash: process " << smash.jobsList.pi_fg << " was killed" << endl;
         smash.jobsList.pi_fg = -1;

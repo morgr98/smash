@@ -112,8 +112,18 @@ Command * SmallShell::CreateCommand(const char* cmd_line) {
     string firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n"));
     if (firstWord.compare("") == 0)
         return nullptr;
-    if (firstWord.compare("chprompt") == 0 || firstWord.compare("chprompt&") == 0)
+    if(cmd_s.size() != firstWord.size()) {
+        string cut_cmd= cmd_s.substr(firstWord.size()+1);
+        string secondWord = cut_cmd.substr(0, cut_cmd.find_first_of(" \n"));
+        if (secondWord.compare(">") == 0 || secondWord.compare(">>") == 0) {
+            return new RedirectionCommand(cmd_line, &this->jobsList);
+        }
+    }
+    if (firstWord.compare("chprompt") == 0 || firstWord.compare("chprompt&") == 0) {
         return new ChpromptCommand(cmd_line, &this->prompt, &this->jobsList);
+    }
+    else if(cmd_s.find('|') != string::npos || cmd_s.find("|&") != string::npos )
+        return new PipeCommand(cmd_line, &this->jobsList);
     else if (firstWord.compare("pwd") == 0 || firstWord.compare("pwd&") == 0)
         return new GetCurrDirCommand(cmd_line, &this->jobsList);
     else if (firstWord.compare("showpid") == 0 || firstWord.compare("showpid&") == 0)
@@ -444,6 +454,111 @@ void QuitCommand::execute() {
         }
     }
     exit(0);
+}
+
+void RedirectionCommand::execute() {
+    if(this->num_args != 3)
+    {
+        return;
+    }
+    Command* cmd= SmallShell::getInstance().CreateCommand(this->command_args[0]);
+    int fd;
+    int new_fd_montior= dup(1);
+    close(1);
+    if(string(this->command_args[1]).compare(">") == 0) {
+        fd = open(this->command_args[2], O_TRUNC | O_WRONLY);
+        if (fd == -1) {
+            perror("smash error: open failed");
+            dup2(new_fd_montior,1);
+            close(new_fd_montior);
+            return;
+        }
+    }
+    else {
+        fd = open(this->command_args[2], O_APPEND | O_WRONLY);
+        if (fd == -1) {
+            perror("smash error: open failed");
+            dup2(new_fd_montior,1);
+            close(new_fd_montior);
+            return;
+        }
+    }
+    cmd->execute();
+    close(fd);
+    dup2(new_fd_montior,1);
+    close(new_fd_montior);
+}
+
+void PipeCommand::execute() {
+    //cout<<this->cmd_line<<endl;
+    std::string cmd_trim = _trim(string(this->cmd_line));
+   // cout<<cmd_trim<<endl;
+    std::size_t pos = cmd_trim.find("|");
+    std::string cmd_line_1 = cmd_trim.substr(0, pos);
+    std::string cmd_line_2;
+    int write_change;
+   if(cmd_trim.find("|&") == string::npos) {
+       cmd_line_2 = cmd_trim.substr(pos+1);
+       write_change=1;
+   }
+   else
+   {
+       cmd_line_2 = cmd_trim.substr(pos+2);
+       write_change=2;
+   }
+    cmd_line_2=_trim(cmd_line_2);
+    Command* cmd1= SmallShell::getInstance().CreateCommand(cmd_line_1.c_str());
+    Command* cmd2= SmallShell::getInstance().CreateCommand(cmd_line_2.c_str());
+    //cout<<cmd_line_2<<endl;
+    //cout<<cmd_line_1<<endl;
+    int my_pipe[2];
+    pipe(my_pipe);
+    pid_t pid_1, pid_2;
+    pid_1= fork();
+    if(pid_1 == -1)
+    {
+        perror("smash error: fork failed");
+        close(my_pipe[0]);
+        close(my_pipe[1]);
+        return;
+    }
+    if(pid_1 == 0)// first son process
+    {
+        setpgrp();
+        close(write_change);
+        dup2(my_pipe[1],write_change);
+        close(my_pipe[0]);
+        close(my_pipe[1]);
+        cmd1->execute();
+        exit(0);
+
+    }
+    else// father process
+    {
+        pid_2=fork();
+        if(pid_2 == -1)
+        {
+            kill(pid_1,9);
+            close(my_pipe[0]);
+            close(my_pipe[1]);
+            perror("smash error: fork failed");
+            return;
+        }
+        if(pid_2 == 0) // second son process
+        {
+            setpgrp();
+            close(0);
+            dup2(my_pipe[0], 0);
+            close(my_pipe[0]);
+            close(my_pipe[1]);
+            cmd2->execute();
+            exit(0);
+        }
+    }
+    close(my_pipe[0]);
+    close(my_pipe[1]);
+    waitpid(pid_1,NULL, WUNTRACED);
+    waitpid(pid_2,NULL, WUNTRACED);
 }
 
 void TailCommand::execute() {
