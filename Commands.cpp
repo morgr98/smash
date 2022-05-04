@@ -142,6 +142,8 @@ Command * SmallShell::CreateCommand(const char* cmd_line) {
         return new QuitCommand(cmd_line, &this->jobsList);
     else if (firstWord.compare("tail") == 0)
         return new TailCommand(cmd_line, &this->jobsList);
+    else if (firstWord.compare("touch") == 0)
+        return new TouchCommand(cmd_line, &this->jobsList);
 
 /*
   else if ...
@@ -626,6 +628,44 @@ void TailCommand::execute() {
     cout << to_print;
     free(to_print);
 }
+
+void TouchCommand::execute() {
+    //cout<<this->num_args<< endl;
+    if(this->num_args != 3)
+    {
+        cerr << "smash error: touch: invalid arguments" << endl;
+        return;
+    }
+    char* file_name= this->command_args[1];
+    string timestamp= string(this->command_args[2]);
+    timestamp.erase(std::remove(timestamp.begin(), timestamp.end(), ':'), timestamp.end());
+    tm time_info={0};
+
+    if(strptime(timestamp.c_str(),"%S%M%H%d%m%Y", &time_info) == nullptr)
+    {
+        return;
+    }
+    /*
+    time_info.tm_sec = stoi(timestamp.substr(0,2));
+    cout<<time_info.tm_sec<< endl;
+    time_info.tm_min = stoi(timestamp.substr(3,5));
+    cout<<time_info.tm_min<< endl;
+    time_info.tm_hour = stoi(timestamp.substr(6,8));
+    cout<<time_info.tm_hour<< endl;
+    time_info.tm_mday = stoi(timestamp.substr(9,11));
+    cout<<time_info.tm_mday<< endl;
+    time_info.tm_mon = stoi(timestamp.substr(12,14));
+    cout<<time_info.tm_mon<< endl;
+    time_info.tm_year = stoi(timestamp.substr(15,19));
+    cout<<time_info.tm_year<< endl;
+*/
+    time_t update_time =mktime(&time_info);
+    utimbuf new_time;
+    new_time.actime= update_time;
+    new_time.modtime= update_time;
+    utime(file_name,&new_time);
+}
+
 JobsList::JobEntry::JobEntry(Command *cmd, JobStatus status) {
     this->cmd = cmd;
     this->status = status;

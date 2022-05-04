@@ -192,7 +192,7 @@ public:
 
 class TouchCommand : public BuiltInCommand {
 public:
-    TouchCommand(const char* cmd_line);
+    TouchCommand(const char* cmd_line, JobsList* jobs): BuiltInCommand(cmd_line, jobs){};
     virtual ~TouchCommand() {}
     void execute() override;
 };
