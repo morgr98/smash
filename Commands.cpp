@@ -144,6 +144,8 @@ Command * SmallShell::CreateCommand(const char* cmd_line) {
         return new TailCommand(cmd_line, &this->jobsList);
     else if (firstWord.compare("touch") == 0)
         return new TouchCommand(cmd_line, &this->jobsList);
+    else if (firstWord.compare("timeout") == 0)
+        return new TouchCommand(cmd_line, &this->jobsList);
 
 /*
   else if ...
@@ -449,7 +451,7 @@ void QuitCommand::execute() {
         std::string first_arg = this->command_args[1];
         if(first_arg.compare("kill") == 0 || first_arg.compare("kill&") == 0) //kill will surely be the first?
         {
-            cout << "sending SIGKILL signal to " << this->pjobsList->jobs.size() - 1 << " jobs:" << endl;
+            cout << "smash sending SIGKILL signal to " << this->pjobsList->jobs.size() - 1 << " jobs:" << endl;
             std::string message;
             this->pjobsList->killAllJobs(nullptr, &message);
             cout << message;
@@ -664,6 +666,21 @@ void TouchCommand::execute() {
     new_time.actime= update_time;
     new_time.modtime= update_time;
     utime(file_name,&new_time);
+}
+
+void TimeoutCommand::execute() {/*
+    string duration1= string(this->command_args[1]);
+    int pos= string(this->cmd_line).find(duration1);
+    string cmd_l = string(this->cmd_line).substr(pos);
+    cmd_l= _trim(cmd_l);
+    int duration = stoi(duration1);
+    alarm(duration);
+    Command* cmd= SmallShell::getInstance().CreateCommand(cmd_l.c_str());
+    struct sigaction siga;
+    siga.sa_flags= SA_RESTART;
+    //siga.sa_handler = cmd->execute;
+    */
+
 }
 
 JobsList::JobEntry::JobEntry(Command *cmd, JobStatus status) {

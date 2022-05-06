@@ -197,6 +197,12 @@ public:
     void execute() override;
 };
 
+class TimeoutCommand : public BuiltInCommand {
+public:
+    TimeoutCommand(const char* cmd_line, JobsList* jobs): BuiltInCommand(cmd_line, jobs){};
+    virtual ~TimeoutCommand() {}
+    void execute() override;
+};
 
 class SmallShell {
 private:
