@@ -314,12 +314,18 @@ void ChangeDirCommand::execute() {
     }
     else
     {
+        char* curr_dir = get_current_dir_name();
+        if (curr_dir == nullptr)
+        {
+            perror("smash error: get_current_dir_name failed");
+            return;
+        }
         if (chdir(this->command_args[1]) == -1)
         {
             perror("smash error: chdir failed");
             return;
         }
-        *plastPwd = *pcurrPwd;
+        *plastPwd = curr_dir;
         *(this->pcurrPwd)=std::string(this->command_args[1]);
     }
 }
@@ -336,9 +342,10 @@ void KillCommand::execute() {
         return;
     }
     int sig_num = stoi(sig_num_str.substr(1));
-    if (sig_num < 1 || sig_num > 31)
+    if (sig_num < 1 || sig_num > 64)
     {
         cerr << "smash error: kill: invalid arguments" << endl;
+        return;
     }
     JobsList::JobEntry* job = this->pjobsList->getJobById(stoi(jobid));
     if (job== nullptr)
@@ -367,6 +374,7 @@ void ForegroundCommand::execute() {
         return;
     }
     JobsList::JobEntry* job_to_fg;
+    this->pjobsList->removeFinishedJobs();
     if (this->num_args == 2)
     {
         std::string jobid_string = std::string(this->command_args[1]);
@@ -406,6 +414,9 @@ void ForegroundCommand::execute() {
     this->pjobsList->cmd_fg = cmd;
     this->pjobsList->jid_fg = job_to_fg->id;
     waitpid(this->pid_ex, NULL, WUNTRACED);
+    this->pjobsList->pi_fg = -1;
+    this->pjobsList->cmd_line_fg = nullptr;
+    this->pjobsList->cmd_fg = nullptr;
 }
 
 void BackgroundCommand::execute() {
@@ -584,19 +595,40 @@ void TailCommand::execute() {
     int fd;
     int N = 10;
     std::string arg_2 = this->command_args[1];
-    if (isNumber(arg_2)) {
-        N = stoi(arg_2);
+    if (this->num_args == 3)
+    {
+        if (!isNumber(arg_2))
+        {
+            cerr << "smash error: tail: invalid arguments" << endl;
+            return;
+        }
+        if (arg_2[0]!='-') {
+            cerr << "smash error: tail: invalid arguments" << endl;
+            return;
+        }
+        std::string if_number = arg_2.substr(1);
+        N = stoi(if_number);
+        if (N==0)
+            return;
         fd = open(this->command_args[2], O_RDONLY);
         if (fd == -1) {
             perror("smash error: open failed");
             return;
         }
-    } else {
+    }
+    else {
         fd = open(this->command_args[1], O_RDONLY);
         if (fd == -1) {
             perror("smash error: open failed");
             return;
         }
+    }
+    char buffer;
+    //read test:
+    if (read(fd, &buffer, 1) == -1)
+    {
+        perror("smash error: read failed");
+        return;
     }
     off64_t end =  lseek(fd, 0, SEEK_END);
     if (end==-1)
@@ -604,7 +636,6 @@ void TailCommand::execute() {
         perror("smash error: lseek failed");
         return;
     }
-    char buffer;
     int count = 0;
     off64_t i = 0;
     while (i < end - 1)
