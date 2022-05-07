@@ -84,6 +84,13 @@ void _removeBackgroundSign(char* cmd_line, bool leave_space = true) {
 }
 
 bool isNumber(const std::string &s) {
+    if (!s.empty())
+    {
+        if(s[0]=='-')
+        {
+            return std::all_of(++s.begin(), s.end(), ::isdigit);
+        }
+    }
     return !s.empty() && std::all_of(s.begin(), s.end(), ::isdigit);
 }
 
@@ -247,6 +254,10 @@ void ExternalCommand::execute() {
             //this->pjobsList->job_fg= new JobsList::JobEntry(this,Foreground);
             //this->pjobsList->job_fg->command_type=this->command_args[1];
             waitpid(this->pid_ex, NULL, WUNTRACED);
+            //gilad added:
+            this->pjobsList->pi_fg=-1;
+            this->pjobsList->cmd_line_fg = nullptr;
+            this->pjobsList->cmd_fg = nullptr;
         }
     }
 }
@@ -421,7 +432,7 @@ void BackgroundCommand::execute() {
         }
         if (job_to_fg->status!=Stopped)
         {
-            cerr << "smash error: bg: job-id " << jid << "is already running in the background" << endl;
+            cerr << "smash error: bg: job-id " << jid << " is already running in the background" << endl;
             return;
         }
     }
@@ -451,7 +462,7 @@ void QuitCommand::execute() {
         std::string first_arg = this->command_args[1];
         if(first_arg.compare("kill") == 0 || first_arg.compare("kill&") == 0) //kill will surely be the first?
         {
-            cout << "smash sending SIGKILL signal to " << this->pjobsList->jobs.size() - 1 << " jobs:" << endl;
+            cout << "smash: sending SIGKILL signal to " << this->pjobsList->jobs.size() - 1 << " jobs:" << endl;
             std::string message;
             this->pjobsList->killAllJobs(nullptr, &message);
             cout << message;
@@ -728,9 +739,9 @@ void JobsList::printJobsList() {
         if(iter->second== nullptr)
             continue;
         double time_elapsed = difftime(time(nullptr), iter->second->time_inserted);
-        cout << "[" << iter->second->id << "] " << iter->second->cmd->cmd_line << " : " << iter->second->cmd->pid_ex << " " << time_elapsed << " ";
+        cout << "[" << iter->second->id << "] " << iter->second->cmd->cmd_line << " : " << iter->second->cmd->pid_ex << " " << time_elapsed << " secs";
         if (iter->second->status == Stopped)
-            cout << "(stopped)";
+            cout << " (stopped)";
         cout << endl;
     }
 }
