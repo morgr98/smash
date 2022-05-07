@@ -413,7 +413,7 @@ void ForegroundCommand::execute() {
     this->pjobsList->cmd_line_fg = cmd->cmd_line;
     this->pjobsList->cmd_fg = cmd;
     this->pjobsList->jid_fg = job_to_fg->id;
-    waitpid(this->pid_ex, NULL, WUNTRACED);
+    waitpid(this->pjobsList->pi_fg, NULL, WUNTRACED);
     this->pjobsList->pi_fg = -1;
     this->pjobsList->cmd_line_fg = nullptr;
     this->pjobsList->cmd_fg = nullptr;
