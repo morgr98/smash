@@ -119,14 +119,9 @@ Command * SmallShell::CreateCommand(const char* cmd_line) {
     string firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n"));
     if (firstWord.compare("") == 0)
         return nullptr;
-    if(cmd_s.size() != firstWord.size()) {
-        string cut_cmd= cmd_s.substr(firstWord.size()+1);
-        string secondWord = cut_cmd.substr(0, cut_cmd.find_first_of(" \n"));
-        if (secondWord.compare(">") == 0 || secondWord.compare(">>") == 0) {
-            return new RedirectionCommand(cmd_line, &this->jobsList);
-        }
-    }
-    if (firstWord.compare("chprompt") == 0 || firstWord.compare("chprompt&") == 0) {
+    else if(cmd_s.find('>') != string::npos || cmd_s.find(">>") != string::npos )
+        return new RedirectionCommand(cmd_line, &this->jobsList);
+    else if (firstWord.compare("chprompt") == 0 || firstWord.compare("chprompt&") == 0) {
         return new ChpromptCommand(cmd_line, &this->prompt, &this->jobsList);
     }
     else if(cmd_s.find('|') != string::npos || cmd_s.find("|&") != string::npos )
@@ -239,8 +234,13 @@ void ExternalCommand::execute() {
     if(this->pid_ex ==0)//child process
     {
         setpgrp();
-        char * args_commend []={(char *)"/bin/bash",(char *)"-c",(char *)this->cmd_ex.c_str(),(char *)"/0"};
-        execv(args_commend[0],args_commend);
+        char * args_commend []={(char *)"/bin/bash",(char *)"-c",(char *)this->cmd_ex.c_str(), NULL};
+        if(execv(args_commend[0],args_commend) == -1) {
+           // perror("smash error : command fail");
+          //  exit(0);
+        }
+        if(!this->is_background)
+            exit(0);
         //for morg - i think you should do it here that if command not found you perror(smash error: ........) and than return;
     }
     else// father process
@@ -483,16 +483,16 @@ void QuitCommand::execute() {
 }
 
 void RedirectionCommand::execute() {
-    if(this->num_args != 3)
-    {
-        return;
-    }
-    Command* cmd= SmallShell::getInstance().CreateCommand(this->command_args[0]);
+    std::size_t pos = string(this->cmd_line).find(">");
+    std::string cmd_line_RD = string(this->cmd_line).substr(0,pos);
+    Command* cmd= SmallShell::getInstance().CreateCommand(cmd_line_RD.c_str());
     int fd;
     int new_fd_montior= dup(1);
     close(1);
-    if(string(this->command_args[1]).compare(">") == 0) {
-        fd = open(this->command_args[2], O_TRUNC | O_WRONLY | O_CREAT);
+    if(string(this->cmd_line).find(">>") == string::npos) {
+        std::string file_name=string(this->cmd_line).substr(pos+1);
+        file_name= _trim(file_name);
+        fd = open(file_name.c_str(), O_TRUNC | O_RDWR | O_CREAT, 0655);
         if (fd == -1) {
             perror("smash error: open failed");
             dup2(new_fd_montior,1);
@@ -501,7 +501,9 @@ void RedirectionCommand::execute() {
         }
     }
     else {
-        fd = open(this->command_args[2], O_APPEND | O_WRONLY | O_CREAT);
+        std::string file_name=string(this->cmd_line).substr(pos+2);
+        file_name= _trim(file_name);
+        fd = open(file_name.c_str(), O_APPEND | O_RDWR | O_CREAT, 0655);
         if (fd == -1) {
             perror("smash error: open failed");
             dup2(new_fd_montior,1);
@@ -610,14 +612,14 @@ void TailCommand::execute() {
         N = stoi(if_number);
         if (N==0)
             return;
-        fd = open(this->command_args[2], O_RDONLY | O_CREAT);
+        fd = open(this->command_args[2], O_RDONLY);
         if (fd == -1) {
             perror("smash error: open failed");
             return;
         }
     }
     else {
-        fd = open(this->command_args[1], O_RDONLY | O_CREAT);
+        fd = open(this->command_args[1], O_RDONLY);
         if (fd == -1) {
             perror("smash error: open failed");
             return;
@@ -839,3 +841,40 @@ void JobsList::killAllJobs(int* num_killed, std::string* message) {
         }
     }
 }
+
+
+/*
+ * pid_t pid= fork();
+    if(pid == -1)
+    {
+        perror("smash error: fork failed");
+        return;
+    }
+    if(pid == 0)// son process
+    {
+        setpgrp();
+        close(1);
+        if(string(this->cmd_line).find(">>") == string::npos){
+            std::string file_name=string(this->cmd_line).substr(pos+1);
+            file_name= _trim(file_name);
+            fd = open(file_name.c_str(), O_TRUNC | O_RDWR | O_CREAT, 0655);
+            if (fd == -1) {
+                perror("smash error: open failed");
+                exit(0);
+            }
+        }
+        else
+        {
+            std::string file_name=string(this->cmd_line).substr(pos+2);
+            file_name= _trim(file_name);
+            fd = open(file_name.c_str(), O_APPEND | O_RDWR | O_CREAT, 0655);
+            if (fd == -1) {
+                perror("smash error: open failed");
+                exit(0);
+            }
+        }
+        cmd->execute();
+        exit(0);
+    }
+    waitpid(pid,NULL, WUNTRACED);
+ */
