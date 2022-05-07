@@ -492,7 +492,7 @@ void RedirectionCommand::execute() {
     int new_fd_montior= dup(1);
     close(1);
     if(string(this->command_args[1]).compare(">") == 0) {
-        fd = open(this->command_args[2], O_TRUNC | O_WRONLY);
+        fd = open(this->command_args[2], O_TRUNC | O_WRONLY | O_CREAT);
         if (fd == -1) {
             perror("smash error: open failed");
             dup2(new_fd_montior,1);
@@ -501,7 +501,7 @@ void RedirectionCommand::execute() {
         }
     }
     else {
-        fd = open(this->command_args[2], O_APPEND | O_WRONLY);
+        fd = open(this->command_args[2], O_APPEND | O_WRONLY | O_CREAT);
         if (fd == -1) {
             perror("smash error: open failed");
             dup2(new_fd_montior,1);
@@ -610,14 +610,14 @@ void TailCommand::execute() {
         N = stoi(if_number);
         if (N==0)
             return;
-        fd = open(this->command_args[2], O_RDONLY);
+        fd = open(this->command_args[2], O_RDONLY | O_CREAT);
         if (fd == -1) {
             perror("smash error: open failed");
             return;
         }
     }
     else {
-        fd = open(this->command_args[1], O_RDONLY);
+        fd = open(this->command_args[1], O_RDONLY | O_CREAT);
         if (fd == -1) {
             perror("smash error: open failed");
             return;
@@ -707,7 +707,8 @@ void TouchCommand::execute() {
     utimbuf new_time;
     new_time.actime= update_time;
     new_time.modtime= update_time;
-    utime(file_name,&new_time);
+    if(utime(file_name,&new_time) == -1)
+        cerr << "smash error: utime failed: No such file or directory" << endl;
 }
 
 void TimeoutCommand::execute() {/*
