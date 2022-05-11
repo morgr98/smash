@@ -652,12 +652,23 @@ void TailCommand::execute() {
     if (read(fd, &buffer, 1) == -1)
     {
         perror("smash error: read failed");
+        close(fd);
         return;
     }
     off64_t end =  lseek(fd, 0, SEEK_END);
     if (end==-1)
     {
         perror("smash error: lseek failed");
+        close(fd);
+        return;
+    }
+    if (end==0) {
+        close(fd);
+        return;
+    }
+    if (end==1) {
+        cout << buffer;
+        close(fd);
         return;
     }
     int count = 0;
@@ -667,6 +678,7 @@ void TailCommand::execute() {
         if (read(fd, &buffer, 1) == -1)
         {
             perror("smash error: read failed");
+            close(fd);
             return;
         }
         if (buffer == '\n')
@@ -682,6 +694,7 @@ void TailCommand::execute() {
         if(lseek(fd, -2, SEEK_CUR)==-1)
         {
             perror("smash error: lseek failed");
+            close(fd);
             return;
         }
     }
@@ -691,10 +704,13 @@ void TailCommand::execute() {
     char* to_print = (char*)malloc(sizeof(char)*(bytes_to_read + 1));
     if (read(fd, to_print, bytes_to_read) == -1) {
         perror("smash error: read failed");
+        close(fd);
         return;
     }
+    to_print[bytes_to_read] = '\0';
     cout << to_print;
     free(to_print);
+    close(fd);
 }
 
 void TouchCommand::execute() {
@@ -881,7 +897,8 @@ void JobsList::killAllJobs(int* num_killed, std::string* message) {
             pid_t pid = it->second->cmd->pid_ex;
             if (kill(pid, SIGKILL) != 0)
             {
-                perror("smash error: kill failed"); //what do we do then?
+                perror("smash error: kill failed");
+                return;
             }
             if (num_killed!=nullptr)
                 (*num_killed)++;
