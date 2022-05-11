@@ -701,7 +701,6 @@ void TailCommand::execute() {
         }
         if (count == N)
         {
-            i+=2;
             break;
         }
         i++;
