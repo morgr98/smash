@@ -116,9 +116,9 @@ Command * SmallShell::CreateCommand(const char* cmd_line) {
     // For example:
     string cmd_s = _trim(string(cmd_line));
     string firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n"));
+
     if(this->is_timeout)
     {
-        //cout<< cmd_line<< endl;
         char** cmd_args = new char*[COMMAND_MAX_ARGS];
         _parseCommandLine(cmd_line,cmd_args);
         string duration1= string(cmd_args[1]);
@@ -127,6 +127,7 @@ Command * SmallShell::CreateCommand(const char* cmd_line) {
         cmd_s= _trim(cmd_l);
         firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n"));
     }
+
     if (firstWord.compare("") == 0)
         return nullptr;
     else if(cmd_s.find('>') != string::npos || cmd_s.find(">>") != string::npos )
@@ -219,13 +220,23 @@ BuiltInCommand::BuiltInCommand(const char* cmd_line, JobsList* shellsjobList):Co
 }
 
 ExternalCommand::ExternalCommand(const char *cmd_line, JobsList* pjobslist) : Command(cmd_line, pjobslist){
+    SmallShell& smash = SmallShell::getInstance();
     if(_isBackgroundComamnd(cmd_line))
     {
         this->is_background= true;
     }
     else
         this->is_background=false;
-    this->cmd_ex=string(this->cmd_line);
+    if(smash.is_timeout)
+    {
+        string duration1= string(this->command_args[1]);
+        int pos= string(this->cmd_line).find(duration1);
+        string cmd_l = string(this->cmd_line).substr(pos + duration1.size());
+        this->cmd_ex= _trim(cmd_l);
+
+    }
+    else
+        this->cmd_ex=string(this->cmd_line);
     _removeBackgroundSign((char*)this->cmd_ex.c_str());
 
 }
@@ -237,6 +248,7 @@ ExternalCommand::~ExternalCommand() {
 void ExternalCommand::execute() {
     SmallShell& smash = SmallShell::getInstance();
     this->pid_ex= fork();
+   // cout<<this->cmd_ex + "!"<< endl;
     if(this->pid_ex==-1)
     {
         perror("smash error: fork failed");
@@ -258,6 +270,7 @@ void ExternalCommand::execute() {
     {
         if(smash.is_timeout)
         {
+           // cout<<pid_ex<<endl;
             for(std::list<TimeCommand>::iterator it = smash.alarms_heap.begin(); it != smash.alarms_heap.end(); ++it)
             {
                 if(it->pid == -1)
@@ -266,6 +279,7 @@ void ExternalCommand::execute() {
                     break;
                 }
             }
+          //  this->timeout_line= this->timeout_line + string(this->cmd_line);
         }
         if (this->is_background) {
             this->pjobsList->addJob(this, Background);
@@ -763,9 +777,12 @@ void TimeoutCommand::execute() {
     int pos= string(this->cmd_line).find(duration1);
     string cmd_l = string(this->cmd_line).substr(pos + duration1.size());
     cmd_l= _trim(cmd_l);
+    this->timeout_line = string(this->cmd_line).substr(0,pos + duration1.size());
+    //cout<<this->timeout_line<<endl;
     int duration = stoi(duration1);
     if(duration < 0)
     {
+        smash.is_timeout= false;
         cerr << "smash error: timeout: invalid arguments" << endl;
         return;
     }
@@ -838,6 +855,7 @@ void JobsList::printJobsList() {
         if(iter->second== nullptr)
             continue;
         double time_elapsed = difftime(time(nullptr), iter->second->time_inserted);
+       // iter->second->cmd->timeout_line
         cout << "[" << iter->second->id << "] " << iter->second->cmd->cmd_line << " : " << iter->second->cmd->pid_ex << " " << time_elapsed << " secs";
         if (iter->second->status == Stopped)
             cout << " (stopped)";

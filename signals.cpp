@@ -64,13 +64,17 @@ void alarmHandler(int sig_num) {
     string cmd_line = smash.alarms_heap.front().cmd_line;
     pid_t pid = smash.alarms_heap.front().pid;
     if(kill(pid,0) != -1) {
-        kill(pid, SIGKILL);
+        if(kill(pid, SIGKILL) != 0){
+            perror("smash error: kill failed");
+            return;
+        }
         cout<<"smash: "+cmd_line +" timed out!"<<endl;
     }
     smash.alarms_heap.erase(smash.alarms_heap.begin());
-
-    time_t alarm_time= (smash.alarms_heap.front().duration + smash.alarms_heap.front().timestamps) - time(nullptr);
-    alarm(alarm_time);
+    if(smash.alarms_heap.begin() != smash.alarms_heap.end()) {
+        time_t alarm_time = (smash.alarms_heap.front().duration + smash.alarms_heap.front().timestamps) - time(nullptr);
+        alarm(alarm_time);
+    }
 
 
 }

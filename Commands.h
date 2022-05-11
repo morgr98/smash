@@ -21,6 +21,7 @@ public:
     char* cmd_line;
     pid_t pid_ex=-1;
     JobsList* pjobsList;
+    std::string timeout_line;
     Command(const char* cmd_line, JobsList* pjobslist);
     // create constructor
     virtual ~Command();
