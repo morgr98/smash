@@ -147,7 +147,7 @@ Command * SmallShell::CreateCommand(const char* cmd_line) {
     else if (firstWord.compare("touch") == 0)
         return new TouchCommand(cmd_line, &this->jobsList);
     else if (firstWord.compare("timeout") == 0)
-        return new TouchCommand(cmd_line, &this->jobsList);
+        return new TimeoutCommand(cmd_line, &this->jobsList);
 
 /*
   else if ...
@@ -225,6 +225,7 @@ ExternalCommand::~ExternalCommand() {
 }
 
 void ExternalCommand::execute() {
+    SmallShell& smash = SmallShell::getInstance();
     this->pid_ex= fork();
     if(this->pid_ex==-1)
     {
@@ -236,8 +237,8 @@ void ExternalCommand::execute() {
         setpgrp();
         char * args_commend []={(char *)"/bin/bash",(char *)"-c",(char *)this->cmd_ex.c_str(), NULL};
         if(execv(args_commend[0],args_commend) == -1) {
-           // perror("smash error : command fail");
-          //  exit(0);
+            perror("smash error : command fail");
+            exit(0);
         }
         if(!this->is_background)
             exit(0);
@@ -245,6 +246,18 @@ void ExternalCommand::execute() {
     }
     else// father process
     {
+        if(smash.is_timeout)
+        {
+            for(std::list<TimeCommand>::iterator it = smash.alarms_heap.begin(); it != smash.alarms_heap.end(); ++it)
+            {
+                if(it->pid == -1)
+                {
+                    it->pid= this->pid_ex;
+                    break;
+                }
+            }
+
+        }
         if (this->is_background) {
             this->pjobsList->addJob(this, Background);
         } else {
@@ -713,19 +726,46 @@ void TouchCommand::execute() {
         cerr << "smash error: utime failed: No such file or directory" << endl;
 }
 
-void TimeoutCommand::execute() {/*
+void TimeoutCommand::execute() {
+    if(this->num_args < 3)
+    {
+        cerr << "smash error: timeout: invalid arguments" << endl;
+        return;
+    }
+    SmallShell& smash = SmallShell::getInstance();
+    smash.is_timeout= true;
     string duration1= string(this->command_args[1]);
     int pos= string(this->cmd_line).find(duration1);
-    string cmd_l = string(this->cmd_line).substr(pos);
+    string cmd_l = string(this->cmd_line).substr(pos + duration1.size());
     cmd_l= _trim(cmd_l);
     int duration = stoi(duration1);
-    alarm(duration);
+    if(duration < 0)
+    {
+        cerr << "smash error: timeout: invalid arguments" << endl;
+        return;
+    }
+    TimeCommand time_cmd(this->cmd_line,duration, time(nullptr), -1);
+    smash.alarms_heap.push_back(time_cmd);
+    smash.alarms_heap.sort();
     Command* cmd= SmallShell::getInstance().CreateCommand(cmd_l.c_str());
-    struct sigaction siga;
-    siga.sa_flags= SA_RESTART;
-    //siga.sa_handler = cmd->execute;
-    */
 
+    time_t alarm_time= (smash.alarms_heap.front().duration + smash.alarms_heap.front().timestamps) - time(nullptr);
+
+    alarm(alarm_time);
+    cmd->execute();
+    smash.is_timeout= false;
+}
+
+bool TimeCommand::operator>(TimeCommand &cmd1) {
+    return (this->duration + this->timestamps ) > (cmd1.duration + cmd1.timestamps );
+}
+
+bool TimeCommand::operator<(TimeCommand &cmd1) {
+    return (this->duration + this->timestamps ) < (cmd1.duration + cmd1.timestamps );
+}
+
+bool TimeCommand::operator==(TimeCommand &cmd1) {
+    return (this->duration + this->timestamps ) == (cmd1.duration + cmd1.timestamps );
 }
 
 JobsList::JobEntry::JobEntry(Command *cmd, JobStatus status) {

@@ -2,6 +2,9 @@
 #define SMASH_COMMAND_H_
 
 #include <map>
+#include <queue>
+#include <vector>
+#include <list>
 
 #define COMMAND_ARGS_MAX_LENGTH (200)
 #define COMMAND_MAX_ARGS (20)
@@ -197,11 +200,34 @@ public:
     void execute() override;
 };
 
+
+class TimeCommand{
+public:
+    std::string cmd_line;
+    time_t duration;
+    time_t timestamps;
+    pid_t pid;
+    TimeCommand(std::string cmd_line, time_t duration, time_t timestamps, pid_t pid ): cmd_line(cmd_line), duration(duration), timestamps(timestamps), pid(pid) {};
+    ~TimeCommand(){}
+
+    bool operator>(TimeCommand& cmd1);
+    bool operator<(TimeCommand& cmd1);
+    bool operator==(TimeCommand& cmd1);
+};
+
+
 class TimeoutCommand : public BuiltInCommand {
 public:
     TimeoutCommand(const char* cmd_line, JobsList* jobs): BuiltInCommand(cmd_line, jobs){};
     virtual ~TimeoutCommand() {}
     void execute() override;
+};
+
+class Bigger{
+public:
+    bool operator()(TimeCommand cmd1, TimeCommand cmd2){
+        return cmd1>cmd2;
+    }
 };
 
 class SmallShell {
@@ -215,6 +241,9 @@ public:
     std::string curr_pwd;
     JobsList jobsList;
     Command *CreateCommand(const char* cmd_line);
+    //std::priority_queue<TimeCommand, std::vector<TimeCommand> ,Bigger > alarms_heap;
+    std::list<TimeCommand> alarms_heap;
+    bool is_timeout= false;
     SmallShell(SmallShell const&)      = delete; // disable copy ctor
     void operator=(SmallShell const&)  = delete; // disable = operator
     static SmallShell& getInstance() // make SmallShell singleton

@@ -2,6 +2,9 @@
 #include <signal.h>
 #include "signals.h"
 #include "Commands.h"
+#include <time.h>
+#include <utime.h>
+#include <unistd.h>
 
 using namespace std;
 
@@ -55,6 +58,20 @@ void ctrlCHandler(int sig_num) {
 }
 
 void alarmHandler(int sig_num) {
+    SmallShell &smash = SmallShell::getInstance();
+    smash.jobsList.removeFinishedJobs();
     cout << "smash: got an alarm" << endl;
+    string cmd_line = smash.alarms_heap.front().cmd_line;
+    pid_t pid = smash.alarms_heap.front().pid;
+    if(kill(pid,0) != -1) {
+        kill(pid, SIGKILL);
+        cout<<"smash: "+cmd_line +" timed out!"<<endl;
+    }
+    smash.alarms_heap.erase(smash.alarms_heap.begin());
+
+    time_t alarm_time= (smash.alarms_heap.front().duration + smash.alarms_heap.front().timestamps) - time(nullptr);
+    alarm(alarm_time);
+
+
 }
 
