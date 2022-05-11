@@ -114,9 +114,19 @@ SmallShell::~SmallShell() {
 */
 Command * SmallShell::CreateCommand(const char* cmd_line) {
     // For example:
-
     string cmd_s = _trim(string(cmd_line));
     string firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n"));
+    if(this->is_timeout)
+    {
+        //cout<< cmd_line<< endl;
+        char** cmd_args = new char*[COMMAND_MAX_ARGS];
+        _parseCommandLine(cmd_line,cmd_args);
+        string duration1= string(cmd_args[1]);
+        int pos= string(cmd_line).find(duration1);
+        string cmd_l = string(cmd_line).substr(pos + duration1.size());
+        cmd_s= _trim(cmd_l);
+        firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n"));
+    }
     if (firstWord.compare("") == 0)
         return nullptr;
     else if(cmd_s.find('>') != string::npos || cmd_s.find(">>") != string::npos )
@@ -256,7 +266,6 @@ void ExternalCommand::execute() {
                     break;
                 }
             }
-
         }
         if (this->is_background) {
             this->pjobsList->addJob(this, Background);
@@ -747,7 +756,7 @@ void TimeoutCommand::execute() {
     TimeCommand time_cmd(this->cmd_line,duration, time(nullptr), -1);
     smash.alarms_heap.push_back(time_cmd);
     smash.alarms_heap.sort();
-    Command* cmd= SmallShell::getInstance().CreateCommand(cmd_l.c_str());
+    Command* cmd= SmallShell::getInstance().CreateCommand(this->cmd_line);
 
     time_t alarm_time= (smash.alarms_heap.front().duration + smash.alarms_heap.front().timestamps) - time(nullptr);
 
