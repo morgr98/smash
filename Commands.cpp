@@ -86,6 +86,7 @@ void _removeBackgroundSign(char* cmd_line, bool leave_space = true) {
 bool isNumber(const std::string &s) {
     if (!s.empty())
     {
+        //negative number is also allowed (or with -)
         if(s[0]=='-')
         {
             return std::all_of(++s.begin(), s.end(), ::isdigit);
@@ -94,10 +95,7 @@ bool isNumber(const std::string &s) {
     return !s.empty() && std::all_of(s.begin(), s.end(), ::isdigit);
 }
 
-// todo: Add your implementation for classes in Commands.h
-
 SmallShell::SmallShell() {
-// TODO: add your implementation
     shell_pid = getpid();
     char* temp = get_current_dir_name();
     curr_pwd = temp;
@@ -106,7 +104,6 @@ SmallShell::SmallShell() {
 }
 
 SmallShell::~SmallShell() {
-// TODO: add your implementation
 }
 
 /**
@@ -159,11 +156,6 @@ Command * SmallShell::CreateCommand(const char* cmd_line) {
         return new TouchCommand(cmd_line, &this->jobsList);
     else if (firstWord.compare("timeout") == 0)
         return new TimeoutCommand(cmd_line, &this->jobsList);
-
-/*
-  else if ...
-  .....
-  */
     else {
         return new ExternalCommand(cmd_line, &this->jobsList);
     }
@@ -172,18 +164,14 @@ Command * SmallShell::CreateCommand(const char* cmd_line) {
 }
 
 void SmallShell::executeCommand(const char *cmd_line) {
-    // TODO: Add your implementation here
-    //for example:
     Command* cmd = CreateCommand(cmd_line);
     if (cmd == nullptr)
         return;
     cmd->pjobsList->removeFinishedJobs();
     cmd->execute();
-    // Please note that you must fork smash process for some commands (e.g., external commands....)
 }
 
 Command::Command(const char *cmd_line, JobsList* pjobsList)  {
-    //this->command_args = (char**)malloc(sizeof(char*)*COMMAND_MAX_ARGS);
     this->command_args = new char*[COMMAND_MAX_ARGS];
     for (int i=0;i<COMMAND_MAX_ARGS;i++)
         command_args[i] = nullptr;
@@ -248,7 +236,6 @@ ExternalCommand::~ExternalCommand() {
 void ExternalCommand::execute() {
     SmallShell& smash = SmallShell::getInstance();
     this->pid_ex= fork();
-   // cout<<this->cmd_ex + "!"<< endl;
     if(this->pid_ex==-1)
     {
         perror("smash error: fork failed");
@@ -259,18 +246,16 @@ void ExternalCommand::execute() {
         setpgrp();
         char * args_commend []={(char *)"/bin/bash",(char *)"-c",(char *)this->cmd_ex.c_str(), NULL};
         if(execv(args_commend[0],args_commend) == -1) {
-            perror("smash error : command fail");
+            perror("smash error: execv failed");
             exit(0);
         }
         if(!this->is_background)
             exit(0);
-        //for morg - i think you should do it here that if command not found you perror(smash error: ........) and than return;
     }
     else// father process
     {
         if(smash.is_timeout)
         {
-           // cout<<pid_ex<<endl;
             for(std::list<TimeCommand>::iterator it = smash.alarms_heap.begin(); it != smash.alarms_heap.end(); ++it)
             {
                 if(it->pid == -1)
@@ -279,7 +264,6 @@ void ExternalCommand::execute() {
                     break;
                 }
             }
-          //  this->timeout_line= this->timeout_line + string(this->cmd_line);
         }
         if (this->is_background) {
             this->pjobsList->addJob(this, Background);
@@ -287,10 +271,11 @@ void ExternalCommand::execute() {
             this->pjobsList->pi_fg = pid_ex;
             this->pjobsList->cmd_line_fg = this->command_args[0];
             this->pjobsList->cmd_fg = this;
-            //this->pjobsList->job_fg= new JobsList::JobEntry(this,Foreground);
-            //this->pjobsList->job_fg->command_type=this->command_args[1];
-            waitpid(this->pid_ex, NULL, WUNTRACED);
-            //gilad added:
+            if(waitpid(this->pid_ex, NULL, WUNTRACED) == -1)
+            {
+                perror("smash error: waitpid failed");
+                return;
+            }
             this->pjobsList->pi_fg=-1;
             this->pjobsList->cmd_line_fg = nullptr;
             this->pjobsList->cmd_fg = nullptr;
@@ -306,7 +291,6 @@ void ChpromptCommand::execute() {
 }
 
 void ShowPidCommand::execute() {
-    //can pid change while shell is working?
     cout << "smash pid is " << *(this->shell_pid) << endl;
 }
 
@@ -449,7 +433,11 @@ void ForegroundCommand::execute() {
     this->pjobsList->cmd_line_fg = cmd->cmd_line;
     this->pjobsList->cmd_fg = cmd;
     this->pjobsList->jid_fg = job_to_fg->id;
-    waitpid(this->pjobsList->pi_fg, NULL, WUNTRACED);
+    if(waitpid(this->pjobsList->pi_fg, NULL, WUNTRACED) == -1)
+    {
+        perror("smash error: waitpid failed");
+        return;
+    }
     this->pjobsList->pi_fg = -1;
     this->pjobsList->cmd_line_fg = nullptr;
     this->pjobsList->cmd_fg = nullptr;
@@ -554,9 +542,7 @@ void RedirectionCommand::execute() {
 }
 
 void PipeCommand::execute() {
-    //cout<<this->cmd_line<<endl;
     std::string cmd_trim = _trim(string(this->cmd_line));
-   // cout<<cmd_trim<<endl;
     std::size_t pos = cmd_trim.find("|");
     std::string cmd_line_1 = cmd_trim.substr(0, pos);
     std::string cmd_line_2;
@@ -573,8 +559,6 @@ void PipeCommand::execute() {
     cmd_line_2=_trim(cmd_line_2);
     Command* cmd1= SmallShell::getInstance().CreateCommand(cmd_line_1.c_str());
     Command* cmd2= SmallShell::getInstance().CreateCommand(cmd_line_2.c_str());
-    //cout<<cmd_line_2<<endl;
-    //cout<<cmd_line_1<<endl;
     int my_pipe[2];
     pipe(my_pipe);
     pid_t pid_1, pid_2;
@@ -662,7 +646,7 @@ void TailCommand::execute() {
         }
     }
     char buffer;
-    //read test:
+    //read test (for checking if the file is readable - not a dir for example
     if (read(fd, &buffer, 1) == -1)
     {
         perror("smash error: read failed");
@@ -727,7 +711,6 @@ void TailCommand::execute() {
 }
 
 void TouchCommand::execute() {
-    //cout<<this->num_args<< endl;
     if(this->num_args != 3)
     {
         cerr << "smash error: touch: invalid arguments" << endl;
@@ -742,26 +725,12 @@ void TouchCommand::execute() {
     {
         return;
     }
-    /*
-    time_info.tm_sec = stoi(timestamp.substr(0,2));
-    cout<<time_info.tm_sec<< endl;
-    time_info.tm_min = stoi(timestamp.substr(3,5));
-    cout<<time_info.tm_min<< endl;
-    time_info.tm_hour = stoi(timestamp.substr(6,8));
-    cout<<time_info.tm_hour<< endl;
-    time_info.tm_mday = stoi(timestamp.substr(9,11));
-    cout<<time_info.tm_mday<< endl;
-    time_info.tm_mon = stoi(timestamp.substr(12,14));
-    cout<<time_info.tm_mon<< endl;
-    time_info.tm_year = stoi(timestamp.substr(15,19));
-    cout<<time_info.tm_year<< endl;
-*/
     time_t update_time =mktime(&time_info);
     utimbuf new_time;
     new_time.actime= update_time;
     new_time.modtime= update_time;
     if(utime(file_name,&new_time) == -1)
-        cerr << "smash error: utime failed: No such file or directory" << endl;
+        perror("smash error: utime failed");
 }
 
 void TimeoutCommand::execute() {
@@ -777,7 +746,6 @@ void TimeoutCommand::execute() {
     string cmd_l = string(this->cmd_line).substr(pos + duration1.size());
     cmd_l= _trim(cmd_l);
     this->timeout_line = string(this->cmd_line).substr(0,pos + duration1.size());
-    //cout<<this->timeout_line<<endl;
     int duration = stoi(duration1);
     if(duration < 0)
     {
@@ -854,7 +822,6 @@ void JobsList::printJobsList() {
         if(iter->second== nullptr)
             continue;
         double time_elapsed = difftime(time(nullptr), iter->second->time_inserted);
-       // iter->second->cmd->timeout_line
         cout << "[" << iter->second->id << "] " << iter->second->cmd->cmd_line << " : " << iter->second->cmd->pid_ex << " " << time_elapsed << " secs";
         if (iter->second->status == Stopped)
             cout << " (stopped)";
@@ -924,40 +891,3 @@ void JobsList::killAllJobs(int* num_killed, std::string* message) {
         }
     }
 }
-
-
-/*
- * pid_t pid= fork();
-    if(pid == -1)
-    {
-        perror("smash error: fork failed");
-        return;
-    }
-    if(pid == 0)// son process
-    {
-        setpgrp();
-        close(1);
-        if(string(this->cmd_line).find(">>") == string::npos){
-            std::string file_name=string(this->cmd_line).substr(pos+1);
-            file_name= _trim(file_name);
-            fd = open(file_name.c_str(), O_TRUNC | O_RDWR | O_CREAT, 0655);
-            if (fd == -1) {
-                perror("smash error: open failed");
-                exit(0);
-            }
-        }
-        else
-        {
-            std::string file_name=string(this->cmd_line).substr(pos+2);
-            file_name= _trim(file_name);
-            fd = open(file_name.c_str(), O_APPEND | O_RDWR | O_CREAT, 0655);
-            if (fd == -1) {
-                perror("smash error: open failed");
-                exit(0);
-            }
-        }
-        cmd->execute();
-        exit(0);
-    }
-    waitpid(pid,NULL, WUNTRACED);
- */

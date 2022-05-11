@@ -23,12 +23,8 @@ public:
     JobsList* pjobsList;
     std::string timeout_line;
     Command(const char* cmd_line, JobsList* pjobslist);
-    // create constructor
     virtual ~Command();
     virtual void execute() = 0;
-    //virtual void prepare();
-    //virtual void cleanup();
-    // TODO: Add your extra methods if needed
 };
 
 class BuiltInCommand : public Command {
@@ -47,7 +43,6 @@ public:
 };
 
 class PipeCommand : public Command {
-    // TODO: Add your data members
 public:
     explicit PipeCommand(const char* cmd_line, JobsList* pjobslist) : Command(cmd_line, pjobslist) {};
     virtual ~PipeCommand() {}
@@ -55,8 +50,6 @@ public:
 };
 
 class RedirectionCommand : public Command {
-    // TODO: Add your data members
-
 public:
     explicit RedirectionCommand(const char* cmd_line, JobsList* pjobslist) : Command(cmd_line, pjobslist) {};
     virtual ~RedirectionCommand() {}
@@ -66,7 +59,6 @@ public:
 };
 
 class ChangeDirCommand : public BuiltInCommand {
-// TODO: Add your data members public:
 public:
     std::string *plastPwd;
     std::string *pcurrPwd;
@@ -101,7 +93,6 @@ public:
 
 
 class QuitCommand : public BuiltInCommand {
-// TODO: Add your data members public:
 public:
     QuitCommand(const char* cmd_line, JobsList* jobs): BuiltInCommand(cmd_line, jobs){};
     virtual ~QuitCommand() {}
@@ -122,18 +113,15 @@ public:
         JobStatus status;
 
         JobEntry(Command* cmd, JobStatus status);
-        // TODO: Add your data members
     };
-    // TODO: Add your data members
 public:
     std::map<jobid, JobEntry*> jobs;
     jobid max_id;
-    JobEntry* job_fg;
    char* cmd_line_fg;
    Command* cmd_fg;
     pid_t pi_fg=-1;
     jobid jid_fg=-1;
-    JobsList(): max_id(0) , job_fg(nullptr), cmd_fg(nullptr){
+    JobsList(): max_id(0), cmd_fg(nullptr){
         jobs.insert(std::pair<jobid, JobEntry*>(0,nullptr));
     };
     ~JobsList(){
@@ -164,7 +152,6 @@ public:
 };
 
 class KillCommand : public BuiltInCommand {
-    // TODO: Add your data members
 public:
     KillCommand(const char* cmd_line, JobsList* jobs):BuiltInCommand(cmd_line, jobs){};
     virtual ~KillCommand() {}
@@ -172,7 +159,6 @@ public:
 };
 
 class ForegroundCommand : public BuiltInCommand {
-    // TODO: Add your data members
 public:
     ForegroundCommand(const char* cmd_line, JobsList* jobs): BuiltInCommand(cmd_line, jobs){};
     virtual ~ForegroundCommand() {}
@@ -180,7 +166,6 @@ public:
 };
 
 class BackgroundCommand : public BuiltInCommand {
-    // TODO: Add your data members
 public:
     BackgroundCommand(const char* cmd_line, JobsList* jobs): BuiltInCommand(cmd_line, jobs){};
     virtual ~BackgroundCommand() {}
@@ -224,16 +209,8 @@ public:
     void execute() override;
 };
 
-class Bigger{
-public:
-    bool operator()(TimeCommand cmd1, TimeCommand cmd2){
-        return cmd1>cmd2;
-    }
-};
-
 class SmallShell {
 private:
-    // TODO: Add your data members
     SmallShell();
 public:
     std::string prompt = "smash> ";
@@ -242,7 +219,6 @@ public:
     std::string curr_pwd;
     JobsList jobsList;
     Command *CreateCommand(const char* cmd_line);
-    //std::priority_queue<TimeCommand, std::vector<TimeCommand> ,Bigger > alarms_heap;
     std::list<TimeCommand> alarms_heap;
     bool is_timeout= false;
     SmallShell(SmallShell const&)      = delete; // disable copy ctor
